@@ -1,0 +1,21 @@
+{
+  "name": "antigravity-to-openai",
+  "version": "1.0.0",
+  "description": "Antigravity API 转 OpenAI 格式的代理服务",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "login": "node oauth-server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": ["antigravity", "openai", "api", "proxy"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
