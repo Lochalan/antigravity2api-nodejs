@@ -1,0 +1,65 @@
+// 字体大小设置
+function initFontSize() {
+    const savedSize = localStorage.getItem('fontSize') || '18';
+    document.documentElement.style.setProperty('--font-size-base', savedSize + 'px');
+    updateFontSizeInputs(savedSize);
+}
+
+function changeFontSize(size) {
+    size = Math.max(10, Math.min(24, parseInt(size) || 14));
+    document.documentElement.style.setProperty('--font-size-base', size + 'px');
+    localStorage.setItem('fontSize', size);
+    updateFontSizeInputs(size);
+}
+
+function updateFontSizeInputs(size) {
+    const rangeInput = document.getElementById('fontSizeRange');
+    const numberInput = document.getElementById('fontSizeInput');
+    if (rangeInput) rangeInput.value = size;
+    if (numberInput) numberInput.value = size;
+}
+
+// 敏感信息隐藏功能
+let sensitiveInfoHidden = localStorage.getItem('sensitiveInfoHidden') !== 'false';
+
+function initSensitiveInfo() {
+    updateSensitiveInfoDisplay();
+    updateSensitiveBtn();
+}
+
+function toggleSensitiveInfo() {
+    sensitiveInfoHidden = !sensitiveInfoHidden;
+    localStorage.setItem('sensitiveInfoHidden', sensitiveInfoHidden);
+    updateSensitiveInfoDisplay();
+    updateSensitiveBtn();
+}
+
+function updateSensitiveBtn() {
+    const btn = document.getElementById('toggleSensitiveBtn');
+    if (btn) {
+        if (sensitiveInfoHidden) {
+            btn.innerHTML = '🙈 隐藏';
+            btn.title = '点击显示敏感信息';
+            btn.classList.remove('btn-info');
+            btn.classList.add('btn-secondary');
+        } else {
+            btn.innerHTML = '👁️ 显示';
+            btn.title = '点击隐藏敏感信息';
+            btn.classList.remove('btn-secondary');
+            btn.classList.add('btn-info');
+        }
+    }
+}
+
+function updateSensitiveInfoDisplay() {
+    document.querySelectorAll('.sensitive-info').forEach(el => {
+        if (sensitiveInfoHidden) {
+            el.dataset.original = el.textContent;
+            el.textContent = '••••••';
+            el.classList.add('blurred');
+        } else if (el.dataset.original) {
+            el.textContent = el.dataset.original;
+            el.classList.remove('blurred');
+        }
+    });
+}

@@ -205,11 +205,8 @@ function handleToolCall(message, antigravityMessages){
 function openaiMessageToAntigravity(openaiMessages, enableThinking, actualModelName, sessionId){
   const antigravityMessages = [];
   for (const message of openaiMessages) {
-    if (message.role === "user") {
-      const extracted = extractImagesFromContent(message.content);
-      handleUserMessage(extracted, antigravityMessages);
-    } else if (message.role === "system") {
-      // 中间的 system 消息作为 user 处理（开头的 system 已在 generateRequestBody 中过滤）
+    if (message.role === "user" || message.role === "system") {
+      // system 消息作为 user 处理（开头的 system 已在 generateRequestBody 中过滤）
       const extracted = extractImagesFromContent(message.content);
       handleUserMessage(extracted, antigravityMessages);
     } else if (message.role === "assistant") {
@@ -226,12 +223,17 @@ function openaiMessageToAntigravity(openaiMessages, enableThinking, actualModelN
  * 从 OpenAI 消息中提取并合并 system 指令
  * 规则：
  * 1. SYSTEM_INSTRUCTION 作为基础 system，可为空
- * 2. 保留用户首条 system 信息，合并在基础 system 后面
- * 3. 如果连续多条 system，合并成一条 system
- * 4. 避免把真正的 system 重复作为 user 发送
+ * 2. 根据 useContextSystemPrompt 配置决定是否收集请求中的 system 消息
+ * 3. 如果 useContextSystemPrompt=true，收集开头连续的 system 消息并合并
+ * 4. 如果 useContextSystemPrompt=false，只使用基础 SYSTEM_INSTRUCTION
  */
 function extractSystemInstruction(openaiMessages) {
   const baseSystem = config.systemInstruction || '';
+  
+  // 如果不使用上下文 system，只返回基础 system
+  if (!config.useContextSystemPrompt) {
+    return baseSystem;
+  }
   
   // 收集开头连续的 system 消息
   const systemTexts = [];
@@ -414,13 +416,16 @@ function generateRequestBody(openaiMessages,modelName,parameters,openaiTools,tok
   // 提取合并后的 system 指令
   const mergedSystemInstruction = extractSystemInstruction(openaiMessages);
   
-  // 过滤掉开头连续的 system 消息，避免重复作为 user 发送
+  // 根据 useContextSystemPrompt 配置决定如何处理 system 消息
   let startIndex = 0;
-  for (let i = 0; i < openaiMessages.length; i++) {
-    if (openaiMessages[i].role === 'system') {
-      startIndex = i + 1;
-    } else {
-      break;
+  if (config.useContextSystemPrompt) {
+    // 过滤掉开头连续的 system 消息，避免重复作为 user 发送
+    for (let i = 0; i < openaiMessages.length; i++) {
+      if (openaiMessages[i].role === 'system') {
+        startIndex = i + 1;
+      } else {
+        break;
+      }
     }
   }
   const filteredMessages = openaiMessages.slice(startIndex);

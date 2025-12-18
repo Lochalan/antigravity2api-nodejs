@@ -31,6 +31,7 @@
     "timeout": 300000,
     "retryTimes": 3,
     "skipProjectIdFetch": false,
-    "useNativeAxios": false
+    "useNativeAxios": false,
+    "useContextSystemPrompt": false
   }
 }

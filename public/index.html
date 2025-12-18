@@ -138,7 +138,7 @@
                                     </div>
                                 </div>
                                 <div class="form-group compact highlight">
-                                    <label>思考预算 <span class="help-tip" title="思考模型的思考token预算，影响推理深度">?</span></label>
+                                    <label>思考预算 <span class="help-tip" data-tooltip="思考模型的思考token预算，影响推理深度">?</span></label>
                                     <input type="number" name="DEFAULT_THINKING_BUDGET" placeholder="16000">
                                 </div>
                                 <div class="form-group compact">
@@ -152,7 +152,7 @@
                                 <h4>🔄 轮询与性能</h4>
                                 <div class="form-row-inline">
                                     <div class="form-group compact">
-                                        <label>策略模式 <span class="help-tip" title="均衡负载：每次请求切换Token&#10;额度耗尽：用完额度才切换&#10;自定义次数：指定次数后切换">?</span></label>
+                                        <label>策略模式 <span class="help-tip" data-tooltip="均衡负载：每次请求切换Token&#10;额度耗尽：用完额度才切换&#10;自定义次数：指定次数后切换">?</span></label>
                                         <select name="ROTATION_STRATEGY" id="rotationStrategy" onchange="toggleRequestCountInput()">
                                             <option value="round_robin">均衡负载</option>
                                             <option value="quota_exhausted">额度耗尽切换</option>
@@ -160,7 +160,7 @@
                                         </select>
                                     </div>
                                     <div class="form-group compact" id="requestCountGroup">
-                                        <label>每Token请求次数 <span class="help-tip" title="自定义次数模式下，每个Token处理多少次请求后切换">?</span></label>
+                                        <label>每Token请求次数 <span class="help-tip" data-tooltip="自定义次数模式下，每个Token处理多少次请求后切换">?</span></label>
                                         <input type="number" name="ROTATION_REQUEST_COUNT" min="1" placeholder="10">
                                     </div>
                                 </div>
@@ -187,11 +187,27 @@
                                 </div>
                                 <div class="form-row-inline">
                                     <div class="form-group compact">
-                                        <label>心跳间隔(ms) <span class="help-tip" title="SSE心跳间隔，防止CF超时断连">?</span></label>
+                                        <label>原生Axios <span class="help-tip" data-tooltip="使用原生axios而非TLS指纹请求器">?</span></label>
+                                        <select name="USE_NATIVE_AXIOS">
+                                            <option value="true">是</option>
+                                            <option value="false">否</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group compact">
+                                        <label>上下文System <span class="help-tip" data-tooltip="合并开头连续的system消息到SystemInstruction">?</span></label>
+                                        <select name="USE_CONTEXT_SYSTEM_PROMPT">
+                                            <option value="false">否</option>
+                                            <option value="true">是</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-row-inline">
+                                    <div class="form-group compact">
+                                        <label>心跳间隔(ms) <span class="help-tip" data-tooltip="SSE心跳间隔，防止CF超时断连">?</span></label>
                                         <input type="number" name="HEARTBEAT_INTERVAL" placeholder="15000">
                                     </div>
                                     <div class="form-group compact">
-                                        <label>内存阈值(MB) <span class="help-tip" title="超过此值触发GC清理">?</span></label>
+                                        <label>内存阈值(MB) <span class="help-tip" data-tooltip="超过此值触发GC清理">?</span></label>
                                         <input type="number" name="MEMORY_THRESHOLD" placeholder="100">
                                     </div>
                                 </div>
@@ -214,6 +230,13 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <!-- 按依赖顺序加载模块 -->
+    <script src="js/utils.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/quota.js"></script>
+    <script src="js/tokens.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
