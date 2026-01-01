@@ -33,6 +33,7 @@
     "skipProjectIdFetch": false,
     "useNativeAxios": false,
     "useContextSystemPrompt": true,
-    "passSignatureToClient": false
+    "passSignatureToClient": true,
+    "disableServerCache": true
   }
 }

@@ -12,6 +12,9 @@ import { getThoughtSignatureForModel, getToolSignatureForModel, sanitizeToolName
  * @returns {Object} 包含思维签名和工具签名的对象
  */
 export function getSignatureContext(sessionId, actualModelName) {
+  if (config.disableServerCache) {
+    return { reasoningSignature: null, toolSignature: null };
+  }
   const cachedReasoningSig = getReasoningSignature(sessionId, actualModelName);
   const cachedToolSig = getToolSignature(sessionId, actualModelName);
 
