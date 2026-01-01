@@ -1,4 +1,4 @@
-// Claude 格式转换工具
+﻿// Claude 譬ｼ蠑剰ｽｬ謐｢蟾･蜈ｷ
 import config from '../../config/config.js';
 import { convertClaudeToolsToAntigravity } from '../toolConverter.js';
 import {
@@ -67,10 +67,14 @@ function handleClaudeAssistantMessage(message, antigravityMessages, enableThinki
   const hasContent = textContent && textContent.trim() !== '';
   const parts = [];
   
-  if (enableThinking) {
-    parts.push(createThoughtPart(' '));
+  if (enableThinking && reasoningSignature) {
+    parts.push(createThoughtPart(' ', reasoningSignature));
   }
-  if (hasContent) parts.push({ text: textContent.trimEnd(), thoughtSignature: reasoningSignature });
+  if (hasContent) {
+    const part = { text: textContent.trimEnd() };
+    if (reasoningSignature) part.thoughtSignature = reasoningSignature;
+    parts.push(part);
+  }
   if (!enableThinking && parts[0]) delete parts[0].thoughtSignature;
 
   pushModelMessage({ parts, toolCalls, hasContent }, antigravityMessages);
@@ -128,3 +132,5 @@ export function generateClaudeRequestBody(claudeMessages, modelName, parameters,
     systemInstruction: mergedSystem
   }, token, actualModelName);
 }
+
+

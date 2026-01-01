@@ -1,4 +1,4 @@
-// Gemini 格式转换工具
+﻿// Gemini 譬ｼ蠑剰ｽｬ謐｢蟾･蜈ｷ
 import config from '../../config/config.js';
 import { generateRequestId } from '../idGenerator.js';
 import { convertGeminiToolsToAntigravity } from '../toolConverter.js';
@@ -6,19 +6,19 @@ import { getSignatureContext, createThoughtPart, modelMapping, isEnableThinking 
 import { normalizeGeminiParameters, toGenerationConfig } from '../parameterNormalizer.js';
 
 /**
- * 为 functionCall 生成唯一 ID
+ * 荳ｺ functionCall 逕滓・蜚ｯ荳 ID
  */
 function generateFunctionCallId() {
   return `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
 /**
- * 处理 functionCall 和 functionResponse 的 ID 匹配
+ * 螟・炊 functionCall 蜥・functionResponse 逧・ID 蛹ｹ驟・
  */
 function processFunctionCallIds(contents) {
   const functionCallIds = [];
   
-  // 收集所有 functionCall 的 ID
+  // 謾ｶ髮・園譛・functionCall 逧・ID
   contents.forEach(content => {
     if (content.role === 'model' && content.parts && Array.isArray(content.parts)) {
       content.parts.forEach(part => {
@@ -32,7 +32,7 @@ function processFunctionCallIds(contents) {
     }
   });
 
-  // 为 functionResponse 分配对应的 ID
+  // 荳ｺ functionResponse 蛻・・蟇ｹ蠎皮噪 ID
   let responseIndex = 0;
   contents.forEach(content => {
     if (content.role === 'user' && content.parts && Array.isArray(content.parts)) {
@@ -49,12 +49,12 @@ function processFunctionCallIds(contents) {
 }
 
 /**
- * 处理 model 消息中的 thought 和签名
+ * 螟・炊 model 豸域・荳ｭ逧・thought 蜥檎ｭｾ蜷・
  */
 function processModelThoughts(content, reasoningSignature, toolSignature) {
   const parts = content.parts;
   
-  // 查找 thought 和独立 thoughtSignature 的位置
+  // 譟･謇ｾ thought 蜥檎峡遶・thoughtSignature 逧・ｽ咲ｽｮ
   let thoughtIndex = -1;
   let signatureIndex = -1;
   let signatureValue = null;
@@ -70,17 +70,17 @@ function processModelThoughts(content, reasoningSignature, toolSignature) {
     }
   }
   
-  // 合并或添加 thought 和签名
+  // 蜷亥ｹｶ謌匁ｷｻ蜉 thought 蜥檎ｭｾ蜷・
   if (thoughtIndex !== -1 && signatureIndex !== -1) {
     parts[thoughtIndex].thoughtSignature = signatureValue;
     parts.splice(signatureIndex, 1);
   } else if (thoughtIndex !== -1 && signatureIndex === -1) {
-    parts[thoughtIndex].thoughtSignature = reasoningSignature;
-  } else if (thoughtIndex === -1) {
+    if (reasoningSignature) parts[thoughtIndex].thoughtSignature = reasoningSignature;
+  } else if (thoughtIndex === -1 && reasoningSignature) {
     parts.unshift(createThoughtPart(' ', reasoningSignature));
   }
   
-  // 收集独立的签名 parts（用于 functionCall）
+  // 謾ｶ髮・峡遶狗噪遲ｾ蜷・parts・育畑莠・functionCall・・
   const standaloneSignatures = [];
   for (let i = parts.length - 1; i >= 0; i--) {
     const part = parts[i];
@@ -89,7 +89,7 @@ function processModelThoughts(content, reasoningSignature, toolSignature) {
     }
   }
   
-  // 为 functionCall 分配签名
+  // 荳ｺ functionCall 蛻・・遲ｾ蜷・
   let sigIndex = 0;
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
@@ -98,12 +98,12 @@ function processModelThoughts(content, reasoningSignature, toolSignature) {
         part.thoughtSignature = standaloneSignatures[sigIndex].signature;
         sigIndex++;
       } else {
-        part.thoughtSignature = toolSignature;
+        if (toolSignature) part.thoughtSignature = toolSignature;
       }
     }
   }
   
-  // 移除已使用的独立签名 parts
+  // 遘ｻ髯､蟾ｲ菴ｿ逕ｨ逧・峡遶狗ｭｾ蜷・parts
   for (let i = standaloneSignatures.length - 1; i >= 0; i--) {
     if (i < sigIndex) {
       parts.splice(standaloneSignatures[i].index, 1);
@@ -130,20 +130,20 @@ export function generateGeminiRequestBody(geminiBody, modelName, token) {
     }
   }
 
-  // 使用统一参数规范化模块处理 Gemini 格式参数
+  // 菴ｿ逕ｨ扈滉ｸ蜿よ焚隗・激蛹匁ｨ｡蝮怜､・炊 Gemini 譬ｼ蠑丞盾謨ｰ
   const normalizedParams = normalizeGeminiParameters(request.generationConfig || {});
   
-  // 转换为 generationConfig 格式
+  // 霓ｬ謐｢荳ｺ generationConfig 譬ｼ蠑・
   request.generationConfig = toGenerationConfig(normalizedParams, enableThinking, actualModelName);
   request.sessionId = token.sessionId;
   delete request.safetySettings;
   
-  // 转换工具定义
+  // 霓ｬ謐｢蟾･蜈ｷ螳壻ｹ・
   if (request.tools && Array.isArray(request.tools)) {
     request.tools = convertGeminiToolsToAntigravity(request.tools, token.sessionId, actualModelName);
   }
   
-  // 添加工具配置
+  // 豺ｻ蜉蟾･蜈ｷ驟咲ｽｮ
   if (request.tools && request.tools.length > 0 && !request.toolConfig) {
     request.toolConfig = { functionCallingConfig: { mode: 'VALIDATED' } };
   }
@@ -167,3 +167,6 @@ export function generateGeminiRequestBody(geminiBody, modelName, token) {
 
   return requestBody;
 }
+
+
+

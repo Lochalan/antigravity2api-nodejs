@@ -1,4 +1,4 @@
-// OpenAI 格式转换工具
+﻿// OpenAI 譬ｼ蠑剰ｽｬ謐｢蟾･蜈ｷ
 import config from '../../config/config.js';
 import { extractSystemInstruction } from '../utils.js';
 import { convertOpenAIToolsToAntigravity } from '../toolConverter.js';
@@ -58,12 +58,17 @@ function handleAssistantMessage(message, antigravityMessages, enableThinking, ac
     : [];
 
   const parts = [];
-  if (enableThinking) {
+  if (enableThinking && reasoningSignature) {
     const reasoningText = (typeof message.reasoning_content === 'string' && message.reasoning_content.length > 0)
       ? message.reasoning_content : ' ';
-    parts.push(createThoughtPart(reasoningText));
+    parts.push(createThoughtPart(reasoningText, reasoningSignature));
   }
-  if (hasContent) parts.push({ text: message.content.trimEnd(), thoughtSignature: message.thoughtSignature || reasoningSignature });
+  if (hasContent) {
+    const part = { text: message.content.trimEnd() };
+    const sig = message.thoughtSignature || reasoningSignature;
+    if (sig) part.thoughtSignature = sig;
+    parts.push(part);
+  }
   if (!enableThinking && parts[0]) delete parts[0].thoughtSignature;
 
   pushModelMessage({ parts, toolCalls, hasContent }, antigravityMessages);
@@ -116,3 +121,5 @@ export function generateRequestBody(openaiMessages, modelName, parameters, opena
     systemInstruction: mergedSystemInstruction
   }, token, actualModelName);
 }
+
+
