@@ -1,4 +1,4 @@
-﻿// OpenAI 譬ｼ蠑剰ｽｬ謐｢蟾･蜈ｷ
+// OpenAI 格式转换工具
 import config from '../../config/config.js';
 import { extractSystemInstruction } from '../utils.js';
 import { convertOpenAIToolsToAntigravity } from '../toolConverter.js';
@@ -121,5 +121,3 @@ export function generateRequestBody(openaiMessages, modelName, parameters, opena
     systemInstruction: mergedSystemInstruction
   }, token, actualModelName);
 }
-
-

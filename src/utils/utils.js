@@ -1,10 +1,10 @@
-﻿// 騾夂畑蟾･蜈ｷ蜃ｽ謨ｰ
+// 通用工具函数
 import config from '../config/config.js';
 import os from 'os';
 import { REASONING_EFFORT_MAP, DEFAULT_STOP_SEQUENCES } from '../constants/index.js';
 import { toGenerationConfig } from './parameterNormalizer.js';
 
-// ==================== 遲ｾ蜷榊ｸｸ驥・====================
+// ==================== 签名常量 ====================
 const CLAUDE_THOUGHT_SIGNATURE = null;
 const GEMINI_THOUGHT_SIGNATURE = null;
 const CLAUDE_TOOL_SIGNATURE = null;
@@ -26,7 +26,7 @@ export function getToolSignatureForModel(actualModelName) {
   return CLAUDE_TOOL_SIGNATURE;
 }
 
-// ==================== 蟾･蜈ｷ蜷咲ｧｰ隗・激蛹・====================
+// ==================== 工具名称规范化 ====================
 export function sanitizeToolName(name) {
   if (!name || typeof name !== 'string') return 'tool';
   let cleaned = name.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -36,7 +36,7 @@ export function sanitizeToolName(name) {
   return cleaned;
 }
 
-// ==================== 蜿よ焚貂・炊 ====================
+// ==================== 参数清理 ====================
 const EXCLUDED_KEYS = new Set([
   '$schema', 'additionalProperties', 'minLength', 'maxLength',
   'minItems', 'maxItems', 'uniqueItems', 'exclusiveMaximum',
@@ -54,7 +54,7 @@ export function cleanParameters(obj) {
   return cleaned;
 }
 
-// ==================== 讓｡蝙区丐蟆・====================
+// ==================== 模型映射 ====================
 export function modelMapping(modelName) {
   if (modelName === 'claude-sonnet-4-5-thinking') return 'claude-sonnet-4-5';
   if (modelName === 'claude-opus-4-5') return 'claude-opus-4-5-thinking';
@@ -70,9 +70,9 @@ export function isEnableThinking(modelName) {
     modelName === 'gpt-oss-120b-medium';
 }
 
-// ==================== 逕滓・驟咲ｽｮ ====================
+// ==================== 生成配置 ====================
 export function generateGenerationConfig(parameters, enableThinking, actualModelName) {
-  // 菴ｿ逕ｨ config.defaults 蜈懷ｺ・
+  // 使用 config.defaults 兜底
   const normalizedParams = {
     temperature: parameters.temperature ?? config.defaults.temperature,
     top_p: parameters.top_p ?? config.defaults.top_p,
@@ -81,22 +81,22 @@ export function generateGenerationConfig(parameters, enableThinking, actualModel
     thinking_budget: parameters.thinking_budget,
   };
 
-  // 螟・炊 reasoning_effort 蛻ｰ thinking_budget 逧・ｽｬ謐｢
+  // 处理 reasoning_effort 到 thinking_budget 的转换
   if (normalizedParams.thinking_budget === undefined && parameters.reasoning_effort !== undefined) {
     const defaultThinkingBudget = config.defaults.thinking_budget ?? 1024;
     normalizedParams.thinking_budget = REASONING_EFFORT_MAP[parameters.reasoning_effort] ?? defaultThinkingBudget;
   }
 
-  // 菴ｿ逕ｨ扈滉ｸ逧・盾謨ｰ霓ｬ謐｢蜃ｽ謨ｰ
+  // 使用统一的参数转换函数
   const generationConfig = toGenerationConfig(normalizedParams, enableThinking, actualModelName);
   
-  // 豺ｻ蜉 stopSequences
+  // 添加 stopSequences
   generationConfig.stopSequences = DEFAULT_STOP_SEQUENCES;
   
   return generationConfig;
 }
 
-// ==================== System 謖・ｻ､謠仙叙 ====================
+// ==================== System 指令提取 ====================
 export function extractSystemInstruction(openaiMessages) {
   const baseSystem = config.systemInstruction || '';
   if (!config.useContextSystemPrompt) return baseSystem;
@@ -121,7 +121,7 @@ export function extractSystemInstruction(openaiMessages) {
   return parts.join('\n\n');
 }
 
-// ==================== 蝗ｾ迚・ｯｷ豎ょ㊥螟・====================
+// ==================== 图片请求准备 ====================
 export function prepareImageRequest(requestBody) {
   if (!requestBody || !requestBody.request) return requestBody;
   let imageSize = "1K";
@@ -148,7 +148,7 @@ export function prepareImageRequest(requestBody) {
   return requestBody;
 }
 
-// ==================== 蜈ｶ莉門ｷ･蜈ｷ ====================
+// ==================== 其他工具 ====================
 export function getDefaultIp() {
   const interfaces = os.networkInterfaces();
   if (interfaces.WLAN) {
@@ -167,10 +167,8 @@ export function getDefaultIp() {
   return '127.0.0.1';
 }
 
-// 驥榊ｯｼ蜃ｺ荳ｻ隕∝・謨ｰ
+// 重导出主要函数
 export { generateRequestId } from './idGenerator.js';
 export { generateRequestBody } from './converters/openai.js';
 export { generateClaudeRequestBody } from './converters/claude.js';
 export { generateGeminiRequestBody } from './converters/gemini.js';
-
-

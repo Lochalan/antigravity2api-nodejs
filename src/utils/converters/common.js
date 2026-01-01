@@ -1,4 +1,4 @@
-﻿// 霓ｬ謐｢蝎ｨ蜈ｬ蜈ｱ讓｡蝮・
+// 转换器公共模块
 import config from '../../config/config.js';
 import { generateRequestId } from '../idGenerator.js';
 import { getReasoningSignature, getToolSignature } from '../thoughtSignatureCache.js';
@@ -6,10 +6,10 @@ import { setToolNameMapping } from '../toolNameCache.js';
 import { getThoughtSignatureForModel, getToolSignatureForModel, sanitizeToolName, modelMapping, isEnableThinking, generateGenerationConfig } from '../utils.js';
 
 /**
- * 闔ｷ蜿也ｭｾ蜷堺ｸ贋ｸ区枚
- * @param {string} sessionId - 莨夊ｯ・ID
- * @param {string} actualModelName - 螳樣刔讓｡蝙句錐遘ｰ
- * @returns {Object} 蛹・性諤晉ｻｴ遲ｾ蜷榊柱蟾･蜈ｷ遲ｾ蜷咲噪蟇ｹ雎｡
+ * 获取签名上下文
+ * @param {string} sessionId - 会话 ID
+ * @param {string} actualModelName - 实际模型名称
+ * @returns {Object} 包含思维签名和工具签名的对象
  */
 export function getSignatureContext(sessionId, actualModelName) {
   const cachedReasoningSig = getReasoningSignature(sessionId, actualModelName);
@@ -22,9 +22,9 @@ export function getSignatureContext(sessionId, actualModelName) {
 }
 
 /**
- * 豺ｻ蜉逕ｨ謌ｷ豸域・蛻ｰ antigravityMessages
- * @param {Object} extracted - 謠仙叙逧・・螳ｹ { text, images }
- * @param {Array} antigravityMessages - 逶ｮ譬・ｶ域・謨ｰ扈・
+ * 添加用户消息到 antigravityMessages
+ * @param {Object} extracted - 提取的内容 { text, images }
+ * @param {Array} antigravityMessages - 目标消息数组
  */
 export function pushUserMessage(extracted, antigravityMessages) {
   antigravityMessages.push({
@@ -34,10 +34,10 @@ export function pushUserMessage(extracted, antigravityMessages) {
 }
 
 /**
- * 譬ｹ謐ｮ蟾･蜈ｷ隹・畑 ID 譟･謇ｾ蜃ｽ謨ｰ蜷・
- * @param {string} toolCallId - 蟾･蜈ｷ隹・畑 ID
- * @param {Array} antigravityMessages - 豸域・謨ｰ扈・
- * @returns {string} 蜃ｽ謨ｰ蜷・
+ * 根据工具调用 ID 查找函数名
+ * @param {string} toolCallId - 工具调用 ID
+ * @param {Array} antigravityMessages - 消息数组
+ * @returns {string} 函数名
  */
 export function findFunctionNameById(toolCallId, antigravityMessages) {
   for (let i = antigravityMessages.length - 1; i >= 0; i--) {
@@ -54,11 +54,11 @@ export function findFunctionNameById(toolCallId, antigravityMessages) {
 }
 
 /**
- * 豺ｻ蜉蜃ｽ謨ｰ蜩榊ｺ泌芦 antigravityMessages
- * @param {string} toolCallId - 蟾･蜈ｷ隹・畑 ID
- * @param {string} functionName - 蜃ｽ謨ｰ蜷・
- * @param {string} resultContent - 蜩榊ｺ泌・螳ｹ
- * @param {Array} antigravityMessages - 逶ｮ譬・ｶ域・謨ｰ扈・
+ * 添加函数响应到 antigravityMessages
+ * @param {string} toolCallId - 工具调用 ID
+ * @param {string} functionName - 函数名
+ * @param {string} resultContent - 响应内容
+ * @param {Array} antigravityMessages - 目标消息数组
  */
 export function pushFunctionResponse(toolCallId, functionName, resultContent, antigravityMessages) {
   const lastMessage = antigravityMessages[antigravityMessages.length - 1];
@@ -78,10 +78,10 @@ export function pushFunctionResponse(toolCallId, functionName, resultContent, an
 }
 
 /**
- * 蛻帛ｻｺ蟶ｦ遲ｾ蜷咲噪諤晉ｻｴ part
- * @param {string} text - 諤晉ｻｴ譁・悽
- * @param {string} signature - 遲ｾ蜷・
- * @returns {Object} 諤晉ｻｴ part
+ * 创建带签名的思维 part
+ * @param {string} text - 思维文本
+ * @param {string} signature - 签名
+ * @returns {Object} 思维 part
  */
 export function createThoughtPart(text, signature = null) {
   const part = { text: text || ' ', thought: true };
@@ -90,12 +90,12 @@ export function createThoughtPart(text, signature = null) {
 }
 
 /**
- * 蛻帛ｻｺ蟶ｦ遲ｾ蜷咲噪蜃ｽ謨ｰ隹・畑 part
- * @param {string} id - 隹・畑 ID
- * @param {string} name - 蜃ｽ謨ｰ蜷搾ｼ亥ｷｲ貂・炊・・
- * @param {Object|string} args - 蜿よ焚
- * @param {string} signature - 遲ｾ蜷搾ｼ亥庄騾会ｼ・
- * @returns {Object} 蜃ｽ謨ｰ隹・畑 part
+ * 创建带签名的函数调用 part
+ * @param {string} id - 调用 ID
+ * @param {string} name - 函数名（已清理）
+ * @param {Object|string} args - 参数
+ * @param {string} signature - 签名（可选）
+ * @returns {Object} 函数调用 part
  */
 export function createFunctionCallPart(id, name, args, signature = null) {
   const part = {
@@ -112,11 +112,11 @@ export function createFunctionCallPart(id, name, args, signature = null) {
 }
 
 /**
- * 螟・炊蟾･蜈ｷ蜷咲ｧｰ譏蟆・
- * @param {string} originalName - 蜴溷ｧ句錐遘ｰ
- * @param {string} sessionId - 莨夊ｯ・ID
- * @param {string} actualModelName - 螳樣刔讓｡蝙句錐遘ｰ
- * @returns {string} 貂・炊蜷守噪螳牙・蜷咲ｧｰ
+ * 处理工具名称映射
+ * @param {string} originalName - 原始名称
+ * @param {string} sessionId - 会话 ID
+ * @param {string} actualModelName - 实际模型名称
+ * @returns {string} 清理后的安全名称
  */
 export function processToolName(originalName, sessionId, actualModelName) {
   const safeName = sanitizeToolName(originalName);
@@ -127,12 +127,12 @@ export function processToolName(originalName, sessionId, actualModelName) {
 }
 
 /**
- * 豺ｻ蜉讓｡蝙区ｶ域・蛻ｰ antigravityMessages
- * @param {Object} options - 騾蛾｡ｹ
- * @param {Array} options.parts - 豸域・ parts
- * @param {Array} options.toolCalls - 蟾･蜈ｷ隹・畑 parts
- * @param {boolean} options.hasContent - 譏ｯ蜷ｦ譛画枚譛ｬ蜀・ｮｹ
- * @param {Array} antigravityMessages - 逶ｮ譬・ｶ域・謨ｰ扈・
+ * 添加模型消息到 antigravityMessages
+ * @param {Object} options - 选项
+ * @param {Array} options.parts - 消息 parts
+ * @param {Array} options.toolCalls - 工具调用 parts
+ * @param {boolean} options.hasContent - 是否有文本内容
+ * @param {Array} antigravityMessages - 目标消息数组
  */
 export function pushModelMessage({ parts, toolCalls, hasContent }, antigravityMessages) {
   const lastMessage = antigravityMessages[antigravityMessages.length - 1];
@@ -148,16 +148,16 @@ export function pushModelMessage({ parts, toolCalls, hasContent }, antigravityMe
 }
 
 /**
- * 譫・ｻｺ蝓ｺ遑隸ｷ豎ゆｽ・
- * @param {Object} options - 騾蛾｡ｹ
- * @param {Array} options.contents - 豸域・蜀・ｮｹ
- * @param {Array} options.tools - 蟾･蜈ｷ蛻苓｡ｨ
- * @param {Object} options.generationConfig - 逕滓・驟咲ｽｮ
- * @param {string} options.sessionId - 莨夊ｯ・ID
- * @param {string} options.systemInstruction - 邉ｻ扈滓欠莉､
- * @param {Object} token - Token 蟇ｹ雎｡
- * @param {string} actualModelName - 螳樣刔讓｡蝙句錐遘ｰ
- * @returns {Object} 隸ｷ豎ゆｽ・
+ * 构建基础请求体
+ * @param {Object} options - 选项
+ * @param {Array} options.contents - 消息内容
+ * @param {Array} options.tools - 工具列表
+ * @param {Object} options.generationConfig - 生成配置
+ * @param {string} options.sessionId - 会话 ID
+ * @param {string} options.systemInstruction - 系统指令
+ * @param {Object} token - Token 对象
+ * @param {string} actualModelName - 实际模型名称
+ * @returns {Object} 请求体
  */
 export function buildRequestBody({ contents, tools, generationConfig, sessionId, systemInstruction }, token, actualModelName) {
   const requestBody = {
@@ -185,10 +185,10 @@ export function buildRequestBody({ contents, tools, generationConfig, sessionId,
 }
 
 /**
- * 蜷亥ｹｶ邉ｻ扈滓欠莉､
- * @param {string} baseSystem - 蝓ｺ遑邉ｻ扈滓欠莉､
- * @param {string} contextSystem - 荳贋ｸ区枚邉ｻ扈滓欠莉､
- * @returns {string} 蜷亥ｹｶ蜷守噪邉ｻ扈滓欠莉､
+ * 合并系统指令
+ * @param {string} baseSystem - 基础系统指令
+ * @param {string} contextSystem - 上下文系统指令
+ * @returns {string} 合并后的系统指令
  */
 export function mergeSystemInstruction(baseSystem, contextSystem) {
   if (!config.useContextSystemPrompt || !contextSystem) {
@@ -201,10 +201,10 @@ export function mergeSystemInstruction(baseSystem, contextSystem) {
   return parts.join('\n\n');
 }
 
-// 驥榊ｯｼ蜃ｺ蟶ｸ逕ｨ蜃ｽ謨ｰ
+// 重导出常用函数
 export { sanitizeToolName, modelMapping, isEnableThinking, generateGenerationConfig };
 
-// 驥榊ｯｼ蜃ｺ蜿よ焚隗・激蛹門・謨ｰ
+// 重导出参数规范化函数
 export {
   normalizeOpenAIParameters,
   normalizeClaudeParameters,
@@ -212,4 +212,3 @@ export {
   normalizeParameters,
   toGenerationConfig
 } from '../parameterNormalizer.js';
-

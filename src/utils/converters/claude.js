@@ -1,4 +1,4 @@
-﻿// Claude 譬ｼ蠑剰ｽｬ謐｢蟾･蜈ｷ
+// Claude 格式转换工具
 import config from '../../config/config.js';
 import { convertClaudeToolsToAntigravity } from '../toolConverter.js';
 import {
@@ -132,5 +132,3 @@ export function generateClaudeRequestBody(claudeMessages, modelName, parameters,
     systemInstruction: mergedSystem
   }, token, actualModelName);
 }
-
-
