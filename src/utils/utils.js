@@ -38,7 +38,7 @@ export function sanitizeToolName(name) {
 
 // ==================== 参数清理 ====================
 const EXCLUDED_KEYS = new Set([
-  '$schema', 'additionalProperties', 'minLength', 'maxLength',
+  '$schema', '$ref', 'additionalProperties', 'minLength', 'maxLength',
   'minItems', 'maxItems', 'uniqueItems', 'exclusiveMaximum',
   'exclusiveMinimum', 'const', 'anyOf', 'oneOf', 'allOf',
   'any_of', 'one_of', 'all_of', 'multipleOf'

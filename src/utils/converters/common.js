@@ -12,8 +12,17 @@ import { getThoughtSignatureForModel, getToolSignatureForModel, sanitizeToolName
  * @returns {Object} 包含思维签名和工具签名的对象
  */
 export function getSignatureContext(sessionId, actualModelName) {
+  // When disableServerCache is true, only use signatures from THIS session's cache
+  // (not the hardcoded fallback signatures from getThoughtSignatureForModel)
+  // This prevents context bleeding between different SillyTavern characters
+  // while still allowing multi-turn conversations to work in Factory/Droid
   if (config.disableServerCache) {
-    return { reasoningSignature: null, toolSignature: null };
+    const cachedReasoningSig = getReasoningSignature(sessionId, actualModelName);
+    const cachedToolSig = getToolSignature(sessionId, actualModelName);
+    return {
+      reasoningSignature: cachedReasoningSig || null,
+      toolSignature: cachedToolSig || null
+    };
   }
   const cachedReasoningSig = getReasoningSignature(sessionId, actualModelName);
   const cachedToolSig = getToolSignature(sessionId, actualModelName);
