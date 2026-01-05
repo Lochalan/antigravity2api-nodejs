@@ -1,4 +1,4 @@
-// 配置管理：加载、保存
+// Configuration management: load, save
 
 function toggleRequestCountInput() {
     const strategy = document.getElementById('rotationStrategy').value;
@@ -17,22 +17,22 @@ async function loadRotationStatus() {
         if (data.success) {
             const { strategy, requestCount, currentIndex } = data.data;
             const strategyNames = {
-                'round_robin': '均衡负载',
-                'quota_exhausted': '额度耗尽切换',
-                'request_count': '自定义次数'
+                'round_robin': 'Round Robin',
+                'quota_exhausted': 'Quota Exhausted',
+                'request_count': 'Custom Count'
             };
             const statusEl = document.getElementById('currentRotationInfo');
             if (statusEl) {
                 let statusText = `${strategyNames[strategy] || strategy}`;
                 if (strategy === 'request_count') {
-                    statusText += ` (每${requestCount}次)`;
+                    statusText += ` (every ${requestCount} requests)`;
                 }
-                statusText += ` | 当前索引: ${currentIndex}`;
+                statusText += ` | Current index: ${currentIndex}`;
                 statusEl.textContent = statusText;
             }
         }
     } catch (error) {
-        console.error('加载轮询状态失败:', error);
+        console.error('Failed to load rotation status:', error);
     }
 }
 
@@ -86,7 +86,7 @@ async function loadConfig() {
             loadRotationStatus();
         }
     } catch (error) {
-        showToast('加载配置失败: ' + error.message, 'error');
+        showToast('Failed to load config: ' + error.message, 'error');
     }
 }
 
@@ -106,7 +106,7 @@ async function saveConfig(e) {
         rotation: {}
     };
     
-    // 处理checkbox：未选中的checkbox不会出现在FormData中
+    // Handle checkbox: unchecked checkboxes don't appear in FormData
     jsonConfig.other.skipProjectIdFetch = form.elements['SKIP_PROJECT_ID_FETCH']?.checked || false;
     jsonConfig.other.useNativeAxios = form.elements['USE_NATIVE_AXIOS']?.checked || false;
     jsonConfig.other.useContextSystemPrompt = form.elements['USE_CONTEXT_SYSTEM_PROMPT']?.checked || false;
@@ -135,7 +135,7 @@ async function saveConfig(e) {
                 jsonConfig.other.retryTimes = Number.isNaN(num) ? undefined : num;
             }
             else if (key === 'SKIP_PROJECT_ID_FETCH' || key === 'USE_NATIVE_AXIOS' || key === 'USE_CONTEXT_SYSTEM_PROMPT' || key === 'PASS_SIGNATURE_TO_CLIENT') {
-                // 跳过，已在上面处理
+                // Skip, already handled above
             }
             else if (key === 'ROTATION_STRATEGY') jsonConfig.rotation.strategy = value || undefined;
             else if (key === 'ROTATION_REQUEST_COUNT') jsonConfig.rotation.requestCount = parseInt(value) || undefined;
@@ -154,7 +154,7 @@ async function saveConfig(e) {
         }
     });
     
-    showLoading('正在保存配置...');
+    showLoading('Saving configuration...');
     try {
         const response = await authFetch('/admin/config', {
             method: 'PUT',
@@ -180,13 +180,13 @@ async function saveConfig(e) {
         
         hideLoading();
         if (data.success) {
-            showToast('配置已保存', 'success');
+            showToast('Configuration saved', 'success');
             loadConfig();
         } else {
-            showToast(data.message || '保存失败', 'error');
+            showToast(data.message || 'Save failed', 'error');
         }
     } catch (error) {
         hideLoading();
-        showToast('保存失败: ' + error.message, 'error');
+        showToast('Save failed: ' + error.message, 'error');
     }
 }

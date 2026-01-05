@@ -67,12 +67,12 @@ function handleClaudeAssistantMessage(message, antigravityMessages, enableThinki
   const hasContent = textContent && textContent.trim() !== '';
   const parts = [];
   
-  if (enableThinking && reasoningSignature) {
-    parts.push(createThoughtPart(' ', reasoningSignature));
-  }
+  // Claude format doesn't pass reasoning_content in message history
+  // Don't inject placeholder thinking blocks - it causes repetitive thinking
+  // The signature is still available for new generation via getSignatureContext
   if (hasContent) {
     const part = { text: textContent.trimEnd() };
-    if (reasoningSignature) part.thoughtSignature = reasoningSignature;
+    if (enableThinking && reasoningSignature) part.thoughtSignature = reasoningSignature;
     parts.push(part);
   }
   if (!enableThinking && parts[0]) delete parts[0].thoughtSignature;

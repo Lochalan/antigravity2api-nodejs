@@ -1,4 +1,4 @@
-// 额度管理：查看、刷新、缓存
+// Quota management: view, refresh, cache
 
 let currentQuotaToken = null;
 
@@ -50,13 +50,13 @@ async function loadTokenQuotaSummary(refreshToken) {
             quotaCache.set(refreshToken, data.data);
             renderQuotaSummary(summaryEl, data.data);
         } else {
-            const errMsg = escapeHtml(data.message || '未知错误');
+            const errMsg = escapeHtml(data.message || 'Unknown error');
             summaryEl.innerHTML = `<span class="quota-summary-error">📊 ${errMsg}</span>`;
         }
     } catch (error) {
         if (error.message !== 'Unauthorized') {
-            console.error('加载额度摘要失败:', error);
-            summaryEl.innerHTML = `<span class="quota-summary-error">📊 加载失败</span>`;
+            console.error('Failed to load quota summary:', error);
+            summaryEl.innerHTML = `<span class="quota-summary-error">📊 Load failed</span>`;
         }
     }
 }
@@ -66,7 +66,7 @@ function renderQuotaSummary(summaryEl, quotaData) {
     const modelEntries = Object.entries(models);
     
     if (modelEntries.length === 0) {
-        summaryEl.textContent = '📊 暂无额度';
+        summaryEl.textContent = '📊 No quota';
         return;
     }
     
@@ -106,16 +106,16 @@ async function toggleQuotaExpand(cardId, refreshToken) {
         toggleEl.classList.add('expanded');
         
         if (!detailEl.dataset.loaded) {
-            detailEl.innerHTML = '<div class="quota-loading-small">加载中...</div>';
+            detailEl.innerHTML = '<div class="quota-loading-small">Loading...</div>';
             await loadQuotaDetail(cardId, refreshToken);
             detailEl.dataset.loaded = 'true';
         }
     } else {
-        // 添加收起动画
+        // Add collapse animation
         detailEl.classList.add('collapsing');
         toggleEl.classList.remove('expanded');
         
-        // 动画结束后隐藏
+        // Hide after animation ends
         setTimeout(() => {
             detailEl.classList.add('hidden');
             detailEl.classList.remove('collapsing');
@@ -138,7 +138,7 @@ async function loadQuotaDetail(cardId, refreshToken) {
             const modelEntries = Object.entries(models);
             
             if (modelEntries.length === 0) {
-                detailEl.innerHTML = '<div class="quota-empty-small">暂无额度信息</div>';
+                detailEl.innerHTML = '<div class="quota-empty-small">No quota information</div>';
                 return;
             }
             
@@ -163,7 +163,7 @@ async function loadQuotaDetail(cardId, refreshToken) {
                     const safeModelId = escapeHtml(modelId);
                     const safeResetTime = escapeHtml(quota.resetTime);
                     groupHtml += `
-                        <div class="quota-detail-row" title="${safeModelId} - 重置: ${safeResetTime}">
+                        <div class="quota-detail-row" title="${safeModelId} - Reset: ${safeResetTime}">
                             <span class="quota-detail-icon">${icon}</span>
                             <span class="quota-detail-name">${shortName}</span>
                             <span class="quota-detail-bar"><span style="width:${percentage}%;background:${barColor}"></span></span>
@@ -178,16 +178,16 @@ async function loadQuotaDetail(cardId, refreshToken) {
             html += renderGroup(grouped.gemini, '💎');
             html += renderGroup(grouped.other, '🔧');
             html += '</div>';
-            html += `<button class="btn btn-info btn-xs quota-refresh-btn" onclick="refreshInlineQuota('${escapeJs(cardId)}', '${escapeJs(refreshToken)}')">🔄 刷新额度</button>`;
+            html += `<button class="btn btn-info btn-xs quota-refresh-btn" onclick="refreshInlineQuota('${escapeJs(cardId)}', '${escapeJs(refreshToken)}')">🔄 Refresh</button>`;
             
             detailEl.innerHTML = html;
         } else {
-            const errMsg = escapeHtml(data.message || '未知错误');
-            detailEl.innerHTML = `<div class="quota-error-small">加载失败: ${errMsg}</div>`;
+            const errMsg = escapeHtml(data.message || 'Unknown error');
+            detailEl.innerHTML = `<div class="quota-error-small">Load failed: ${errMsg}</div>`;
         }
     } catch (error) {
         if (error.message !== 'Unauthorized') {
-            detailEl.innerHTML = `<div class="quota-error-small">网络错误</div>`;
+            detailEl.innerHTML = `<div class="quota-error-small">Network error</div>`;
         }
     }
 }
@@ -196,8 +196,8 @@ async function refreshInlineQuota(cardId, refreshToken) {
     const detailEl = document.getElementById(`quota-detail-${cardId}`);
     const summaryEl = document.getElementById(`quota-summary-${cardId}`);
     
-    if (detailEl) detailEl.innerHTML = '<div class="quota-loading-small">刷新中...</div>';
-    if (summaryEl) summaryEl.textContent = '📊 刷新中...';
+    if (detailEl) detailEl.innerHTML = '<div class="quota-loading-small">Refreshing...</div>';
+    if (summaryEl) summaryEl.textContent = '📊 Refreshing...';
     
     quotaCache.clear(refreshToken);
     
@@ -221,7 +221,7 @@ async function showQuotaModal(refreshToken) {
     const activeIndex = cachedTokens.findIndex(t => t.refresh_token === refreshToken);
     
     const emailTabs = cachedTokens.map((t, index) => {
-        const email = t.email || '未知';
+        const email = t.email || 'Unknown';
         const shortEmail = email.length > 20 ? email.substring(0, 17) + '...' : email;
         const isActive = index === activeIndex;
         const safeEmail = escapeHtml(email);
@@ -235,18 +235,18 @@ async function showQuotaModal(refreshToken) {
     modal.innerHTML = `
         <div class="modal-content modal-xl">
             <div class="quota-modal-header">
-                <div class="modal-title">📊 模型额度</div>
+                <div class="modal-title">📊 Model Quota</div>
                 <div class="quota-update-time" id="quotaUpdateTime"></div>
             </div>
             <div class="quota-tabs" id="quotaEmailList">
                 ${emailTabs}
             </div>
             <div id="quotaContent" class="quota-container">
-                <div class="quota-loading">加载中...</div>
+                <div class="quota-loading">Loading...</div>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-info btn-sm" id="quotaRefreshBtn" onclick="refreshQuotaData()">🔄 刷新</button>
-                <button class="btn btn-secondary btn-sm" onclick="this.closest('.modal').remove()">关闭</button>
+                <button class="btn btn-info btn-sm" id="quotaRefreshBtn" onclick="refreshQuotaData()">🔄 Refresh</button>
+                <button class="btn btn-secondary btn-sm" onclick="this.closest('.modal').remove()">Close</button>
             </div>
         </div>
     `;
@@ -297,7 +297,7 @@ async function loadQuotaData(refreshToken, forceRefresh = false) {
     const refreshBtn = document.getElementById('quotaRefreshBtn');
     if (refreshBtn) {
         refreshBtn.disabled = true;
-        refreshBtn.textContent = '⏳ 加载中...';
+        refreshBtn.textContent = '⏳ Loading...';
     }
     
     if (!forceRefresh) {
@@ -306,7 +306,7 @@ async function loadQuotaData(refreshToken, forceRefresh = false) {
             renderQuotaModal(quotaContent, cached);
             if (refreshBtn) {
                 refreshBtn.disabled = false;
-                refreshBtn.textContent = '🔄 刷新';
+                refreshBtn.textContent = '🔄 Refresh';
             }
             return;
         }
@@ -314,7 +314,7 @@ async function loadQuotaData(refreshToken, forceRefresh = false) {
         quotaCache.clear(refreshToken);
     }
     
-    quotaContent.innerHTML = '<div class="quota-loading">加载中...</div>';
+    quotaContent.innerHTML = '<div class="quota-loading">Loading...</div>';
     
     try {
         const url = `/admin/tokens/${encodeURIComponent(refreshToken)}/quotas${forceRefresh ? '?refresh=true' : ''}`;
@@ -328,16 +328,16 @@ async function loadQuotaData(refreshToken, forceRefresh = false) {
             quotaCache.set(refreshToken, data.data);
             renderQuotaModal(quotaContent, data.data);
         } else {
-            quotaContent.innerHTML = `<div class="quota-error">加载失败: ${escapeHtml(data.message)}</div>`;
+            quotaContent.innerHTML = `<div class="quota-error">Load failed: ${escapeHtml(data.message)}</div>`;
         }
     } catch (error) {
         if (quotaContent) {
-            quotaContent.innerHTML = `<div class="quota-error">加载失败: ${escapeHtml(error.message)}</div>`;
+            quotaContent.innerHTML = `<div class="quota-error">Load failed: ${escapeHtml(error.message)}</div>`;
         }
     } finally {
         if (refreshBtn) {
             refreshBtn.disabled = false;
-            refreshBtn.textContent = '🔄 刷新';
+            refreshBtn.textContent = '🔄 Refresh';
         }
     }
 }
@@ -353,14 +353,14 @@ function renderQuotaModal(quotaContent, quotaData) {
     
     const updateTimeEl = document.getElementById('quotaUpdateTime');
     if (updateTimeEl && quotaData.lastUpdated) {
-        const lastUpdated = new Date(quotaData.lastUpdated).toLocaleString('zh-CN', {
+        const lastUpdated = new Date(quotaData.lastUpdated).toLocaleString('en-US', {
             month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
         });
-        updateTimeEl.textContent = `更新于 ${lastUpdated}`;
+        updateTimeEl.textContent = `Updated ${lastUpdated}`;
     }
     
     if (Object.keys(models).length === 0) {
-        quotaContent.innerHTML = '<div class="quota-empty">暂无额度信息</div>';
+        quotaContent.innerHTML = '<div class="quota-empty">No quota information</div>';
         return;
     }
     
@@ -391,7 +391,7 @@ function renderQuotaModal(quotaContent, quotaData) {
                         <div class="quota-bar" style="width: ${percentage}%; background: ${barColor};"></div>
                     </div>
                     <div class="quota-info-row">
-                        <span class="quota-reset">重置: ${safeResetTime}</span>
+                        <span class="quota-reset">Reset: ${safeResetTime}</span>
                         <span class="quota-percentage">${percentageText}</span>
                     </div>
                 </div>
@@ -403,7 +403,7 @@ function renderQuotaModal(quotaContent, quotaData) {
     
     html += renderGroup(grouped.claude, '🤖 Claude');
     html += renderGroup(grouped.gemini, '💎 Gemini');
-    html += renderGroup(grouped.other, '🔧 其他');
+    html += renderGroup(grouped.other, '🔧 Other');
     
     quotaContent.innerHTML = html;
 }

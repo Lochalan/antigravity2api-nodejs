@@ -70,15 +70,16 @@ function processModelThoughts(content, reasoningSignature, toolSignature) {
     }
   }
   
-  // 合并或添加 thought 和签名
+  // Merge thought and signature if both exist
+  // Don't inject placeholder thinking - it causes repetitive thinking blocks
   if (thoughtIndex !== -1 && signatureIndex !== -1) {
     parts[thoughtIndex].thoughtSignature = signatureValue;
     parts.splice(signatureIndex, 1);
   } else if (thoughtIndex !== -1 && signatureIndex === -1) {
     if (reasoningSignature) parts[thoughtIndex].thoughtSignature = reasoningSignature;
-  } else if (thoughtIndex === -1 && reasoningSignature) {
-    parts.unshift(createThoughtPart(' ', reasoningSignature));
   }
+  // Removed: Don't inject placeholder thought parts for messages that don't have thinking
+  // The signature is still available via getSignatureContext for new generation
   
   // 收集独立的签名 parts（用于 functionCall）
   const standaloneSignatures = [];

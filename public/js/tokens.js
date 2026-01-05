@@ -268,11 +268,11 @@ async function addTokenFromModal() {
     const expiresIn = parseInt(document.getElementById('modalExpiresIn').value);
     
     if (!accessToken || !refreshToken) {
-        showToast('请填写完整的Token信息', 'warning');
+        showToast('Please fill in complete token info', 'warning');
         return;
     }
     
-    showLoading('正在添加Token...');
+    showLoading('Adding token...');
     try {
         const response = await authFetch('/admin/tokens', {
             method: 'POST',
@@ -287,14 +287,14 @@ async function addTokenFromModal() {
         hideLoading();
         if (data.success) {
             modal.remove();
-            showToast('Token添加成功', 'success');
+            showToast('Token added successfully', 'success');
             loadTokens();
         } else {
-            showToast(data.message || '添加失败', 'error');
+            showToast(data.message || 'Add failed', 'error');
         }
     } catch (error) {
         hideLoading();
-        showToast('添加失败: ' + error.message, 'error');
+        showToast('Add failed: ' + error.message, 'error');
     }
 }
 
@@ -305,13 +305,13 @@ function editField(event, refreshToken, field, currentValue) {
     
     if (row.querySelector('input')) return;
     
-    const fieldLabels = { projectId: 'Project ID', email: '邮箱' };
+    const fieldLabels = { projectId: 'Project ID', email: 'Email' };
     
     const input = document.createElement('input');
     input.type = field === 'email' ? 'email' : 'text';
     input.value = currentValue;
     input.className = 'inline-edit-input';
-    input.placeholder = `输入${fieldLabels[field]}`;
+    input.placeholder = `Enter ${fieldLabels[field]}`;
     
     valueSpan.style.display = 'none';
     row.insertBefore(input, valueSpan.nextSibling);
@@ -334,14 +334,14 @@ function editField(event, refreshToken, field, currentValue) {
             
             const data = await response.json();
             if (data.success) {
-                showToast('已保存', 'success');
+                showToast('Saved', 'success');
                 loadTokens();
             } else {
-                showToast(data.message || '保存失败', 'error');
+                showToast(data.message || 'Save failed', 'error');
                 cancel();
             }
         } catch (error) {
-            showToast('保存失败', 'error');
+            showToast('Save failed', 'error');
             cancel();
         }
     };
@@ -376,46 +376,46 @@ function editField(event, refreshToken, field, currentValue) {
 function showTokenDetail(refreshToken) {
     const token = cachedTokens.find(t => t.refresh_token === refreshToken);
     if (!token) {
-        showToast('Token不存在', 'error');
+        showToast('Token not found', 'error');
         return;
     }
     
-    // 转义所有用户数据防止 XSS
+    // Escape all user data to prevent XSS
     const safeAccessToken = escapeHtml(token.access_token || '');
     const safeRefreshToken = escapeHtml(token.refresh_token);
     const safeRefreshTokenJs = escapeJs(refreshToken);
     const safeProjectId = escapeHtml(token.projectId || '');
     const safeEmail = escapeHtml(token.email || '');
-    const expireTimeStr = escapeHtml(new Date(token.timestamp + token.expires_in * 1000).toLocaleString('zh-CN'));
+    const expireTimeStr = escapeHtml(new Date(token.timestamp + token.expires_in * 1000).toLocaleString('en-US'));
     
     const modal = document.createElement('div');
     modal.className = 'modal form-modal';
     modal.innerHTML = `
         <div class="modal-content">
-            <div class="modal-title">📝 Token详情</div>
+            <div class="modal-title">📝 Token Details</div>
             <div class="form-group compact">
-                <label>🎫 Access Token (只读)</label>
+                <label>🎫 Access Token (read-only)</label>
                 <div class="token-display">${safeAccessToken}</div>
             </div>
             <div class="form-group compact">
-                <label>🔄 Refresh Token (只读)</label>
+                <label>🔄 Refresh Token (read-only)</label>
                 <div class="token-display">${safeRefreshToken}</div>
             </div>
             <div class="form-group compact">
                 <label>📦 Project ID</label>
-                <input type="text" id="editProjectId" value="${safeProjectId}" placeholder="项目ID">
+                <input type="text" id="editProjectId" value="${safeProjectId}" placeholder="Project ID">
             </div>
             <div class="form-group compact">
-                <label>📧 邮箱</label>
-                <input type="email" id="editEmail" value="${safeEmail}" placeholder="账号邮箱">
+                <label>📧 Email</label>
+                <input type="email" id="editEmail" value="${safeEmail}" placeholder="Account email">
             </div>
             <div class="form-group compact">
-                <label>⏰ 过期时间</label>
+                <label>⏰ Expiry Time</label>
                 <input type="text" value="${expireTimeStr}" readonly style="background: var(--bg); cursor: not-allowed;">
             </div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">取消</button>
-                <button class="btn btn-success" onclick="saveTokenDetail('${safeRefreshTokenJs}')">💾 保存</button>
+                <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+                <button class="btn btn-success" onclick="saveTokenDetail('${safeRefreshTokenJs}')">💾 Save</button>
             </div>
         </div>
     `;
@@ -427,7 +427,7 @@ async function saveTokenDetail(refreshToken) {
     const projectId = document.getElementById('editProjectId').value.trim();
     const email = document.getElementById('editEmail').value.trim();
     
-    showLoading('保存中...');
+    showLoading('Saving...');
     try {
         const response = await authFetch(`/admin/tokens/${encodeURIComponent(refreshToken)}`, {
             method: 'PUT',
@@ -442,23 +442,23 @@ async function saveTokenDetail(refreshToken) {
         hideLoading();
         if (data.success) {
             document.querySelector('.form-modal').remove();
-            showToast('保存成功', 'success');
+            showToast('Saved successfully', 'success');
             loadTokens();
         } else {
-            showToast(data.message || '保存失败', 'error');
+            showToast(data.message || 'Save failed', 'error');
         }
     } catch (error) {
         hideLoading();
-        showToast('保存失败: ' + error.message, 'error');
+        showToast('Save failed: ' + error.message, 'error');
     }
 }
 
 async function toggleToken(refreshToken, enable) {
-    const action = enable ? '启用' : '禁用';
-    const confirmed = await showConfirm(`确定要${action}这个Token吗？`, `${action}确认`);
+    const action = enable ? 'enable' : 'disable';
+    const confirmed = await showConfirm(`Are you sure you want to ${action} this token?`, `Confirm ${action}`);
     if (!confirmed) return;
     
-    showLoading(`正在${action}...`);
+    showLoading(`Processing...`);
     try {
         const response = await authFetch(`/admin/tokens/${encodeURIComponent(refreshToken)}`, {
             method: 'PUT',
@@ -472,23 +472,23 @@ async function toggleToken(refreshToken, enable) {
         const data = await response.json();
         hideLoading();
         if (data.success) {
-            showToast(`已${action}`, 'success');
-            skipAnimation = true; // 跳过动画
+            showToast(`Token ${action}d`, 'success');
+            skipAnimation = true; // Skip animation
             loadTokens();
         } else {
-            showToast(data.message || '操作失败', 'error');
+            showToast(data.message || 'Operation failed', 'error');
         }
     } catch (error) {
         hideLoading();
-        showToast('操作失败: ' + error.message, 'error');
+        showToast('Operation failed: ' + error.message, 'error');
     }
 }
 
 async function deleteToken(refreshToken) {
-    const confirmed = await showConfirm('删除后无法恢复，确定删除？', '⚠️ 删除确认');
+    const confirmed = await showConfirm('Cannot be recovered after deletion. Are you sure?', '⚠️ Delete Confirm');
     if (!confirmed) return;
     
-    showLoading('正在删除...');
+    showLoading('Deleting...');
     try {
         const response = await authFetch(`/admin/tokens/${encodeURIComponent(refreshToken)}`, {
             method: 'DELETE',
@@ -498,13 +498,13 @@ async function deleteToken(refreshToken) {
         const data = await response.json();
         hideLoading();
         if (data.success) {
-            showToast('已删除', 'success');
+            showToast('Deleted', 'success');
             loadTokens();
         } else {
-            showToast(data.message || '删除失败', 'error');
+            showToast(data.message || 'Delete failed', 'error');
         }
     } catch (error) {
         hideLoading();
-        showToast('删除失败: ' + error.message, 'error');
+        showToast('Delete failed: ' + error.message, 'error');
     }
 }
