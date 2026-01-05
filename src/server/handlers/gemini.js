@@ -171,6 +171,23 @@ export const handleGeminiRequest = async (req, res, modelName, isStream) => {
       throw new Error('没有可用的token，请运行 npm run login 获取token');
     }
 
+    // Auto-generate session ID based on client type to isolate signature caches
+    // Factory and SillyTavern will have separate caches, preventing context bleeding
+    const userAgent = req.headers['user-agent'] || '';
+    const clientSessionId = req.headers['x-session-id'];
+    
+    if (clientSessionId) {
+      // Explicit session ID takes priority
+      token.sessionId = clientSessionId;
+    } else if (userAgent.includes('factory')) {
+      // Factory CLI - use a static session ID so signatures persist across token rotations
+      token.sessionId = 'factory-client';
+    } else if (userAgent.includes('SillyTavern')) {
+      // SillyTavern - use static session ID so signatures persist across token rotations
+      token.sessionId = 'sillytavern-client';
+    }
+    // Otherwise use default token.sessionId
+
     const isImageModel = modelName.includes('-image');
     const requestBody = generateGeminiRequestBody(req.body, modelName, token);
     

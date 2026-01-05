@@ -1,11 +1,11 @@
-// UI组件：Toast、Modal、Loading
+// UI Components: Toast, Modal, Loading
 
 function showToast(message, type = 'info', title = '') {
     const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
-    const titles = { success: '成功', error: '错误', warning: '警告', info: '提示' };
+    const titles = { success: 'Success', error: 'Error', warning: 'Warning', info: 'Info' };
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    // 转义用户输入防止 XSS
+    // Escape user input to prevent XSS
     const safeTitle = escapeHtml(title || titles[type]);
     const safeMessage = escapeHtml(message);
     toast.innerHTML = `
@@ -22,11 +22,11 @@ function showToast(message, type = 'info', title = '') {
     }, 3000);
 }
 
-function showConfirm(message, title = '确认操作') {
+function showConfirm(message, title = 'Confirm Action') {
     return new Promise((resolve) => {
         const modal = document.createElement('div');
         modal.className = 'modal';
-        // 转义用户输入防止 XSS
+        // Escape user input to prevent XSS
         const safeTitle = escapeHtml(title);
         const safeMessage = escapeHtml(message);
         modal.innerHTML = `
@@ -34,8 +34,8 @@ function showConfirm(message, title = '确认操作') {
                 <div class="modal-title">${safeTitle}</div>
                 <div class="modal-message">${safeMessage}</div>
                 <div class="modal-actions">
-                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove(); window.modalResolve(false)">取消</button>
-                    <button class="btn btn-danger" onclick="this.closest('.modal').remove(); window.modalResolve(true)">确定</button>
+                    <button class="btn btn-secondary" onclick="this.closest('.modal').remove(); window.modalResolve(false)">Cancel</button>
+                    <button class="btn btn-danger" onclick="this.closest('.modal').remove(); window.modalResolve(true)">OK</button>
                 </div>
             </div>
         `;
@@ -45,11 +45,11 @@ function showConfirm(message, title = '确认操作') {
     });
 }
 
-function showLoading(text = '处理中...') {
+function showLoading(text = 'Processing...') {
     const overlay = document.createElement('div');
     overlay.className = 'loading-overlay';
     overlay.id = 'loadingOverlay';
-    // 转义用户输入防止 XSS
+    // Escape user input to prevent XSS
     const safeText = escapeHtml(text);
     overlay.innerHTML = `<div class="spinner"></div><div class="loading-text">${safeText}</div>`;
     document.body.appendChild(overlay);
@@ -61,17 +61,17 @@ function hideLoading() {
 }
 
 function switchTab(tab, saveState = true) {
-    // 更新html元素的class以防止闪烁
+    // Update html element class to prevent flicker
     if (tab === 'settings') {
         document.documentElement.classList.add('tab-settings');
     } else {
         document.documentElement.classList.remove('tab-settings');
     }
     
-    // 移除所有tab的active状态
+    // Remove active state from all tabs
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     
-    // 找到对应的tab按钮并激活
+    // Find and activate the target tab button
     const targetTab = document.querySelector(`.tab[data-tab="${tab}"]`);
     if (targetTab) {
         targetTab.classList.add('active');
@@ -80,33 +80,33 @@ function switchTab(tab, saveState = true) {
     const tokensPage = document.getElementById('tokensPage');
     const settingsPage = document.getElementById('settingsPage');
     
-    // 隐藏所有页面并移除动画类
+    // Hide all pages and remove animation classes
     tokensPage.classList.add('hidden');
     tokensPage.classList.remove('page-enter');
     settingsPage.classList.add('hidden');
     settingsPage.classList.remove('page-enter');
     
-    // 显示对应页面并添加入场动画
+    // Show target page and add entrance animation
     if (tab === 'tokens') {
         tokensPage.classList.remove('hidden');
-        // 触发重排以重新播放动画
+        // Trigger reflow to replay animation
         void tokensPage.offsetWidth;
         tokensPage.classList.add('page-enter');
     } else if (tab === 'settings') {
         settingsPage.classList.remove('hidden');
-        // 触发重排以重新播放动画
+        // Trigger reflow to replay animation
         void settingsPage.offsetWidth;
         settingsPage.classList.add('page-enter');
         loadConfig();
     }
     
-    // 保存当前Tab状态到localStorage
+    // Save current tab state to localStorage
     if (saveState) {
         localStorage.setItem('currentTab', tab);
     }
 }
 
-// 恢复Tab状态
+// Restore tab state
 function restoreTabState() {
     const savedTab = localStorage.getItem('currentTab');
     if (savedTab && (savedTab === 'tokens' || savedTab === 'settings')) {

@@ -1,17 +1,17 @@
-// Token管理：增删改查、启用禁用
+// Token Management: CRUD, Enable/Disable
 
 let cachedTokens = [];
 let currentFilter = localStorage.getItem('tokenFilter') || 'all'; // 'all', 'enabled', 'disabled'
-let skipAnimation = false; // 是否跳过动画
+let skipAnimation = false; // Skip animation flag
 
-// 初始化筛选状态
+// Initialize filter state
 function initFilterState() {
     const savedFilter = localStorage.getItem('tokenFilter') || 'all';
     currentFilter = savedFilter;
     updateFilterButtonState(savedFilter);
 }
 
-// 更新筛选按钮状态
+// Update filter button state
 function updateFilterButtonState(filter) {
     document.querySelectorAll('.stat-item').forEach(item => {
         item.classList.remove('active');
@@ -23,14 +23,14 @@ function updateFilterButtonState(filter) {
     }
 }
 
-// 筛选 Token
+// Filter tokens
 function filterTokens(filter) {
     currentFilter = filter;
-    localStorage.setItem('tokenFilter', filter); // 持久化筛选状态
+    localStorage.setItem('tokenFilter', filter); // Persist filter state
     
     updateFilterButtonState(filter);
     
-    // 重新渲染
+    // Re-render
     renderTokens(cachedTokens);
 }
 
@@ -44,18 +44,18 @@ async function loadTokens() {
         if (data.success) {
             renderTokens(data.data);
         } else {
-            showToast('加载失败: ' + (data.message || '未知错误'), 'error');
+            showToast('Load failed: ' + (data.message || 'Unknown error'), 'error');
         }
     } catch (error) {
-        showToast('加载Token失败: ' + error.message, 'error');
+        showToast('Failed to load tokens: ' + error.message, 'error');
     }
 }
 
-// 正在刷新的 Token 集合
+// Set of tokens currently being refreshed
 const refreshingTokens = new Set();
 
 function renderTokens(tokens) {
-    // 只在首次加载时更新缓存
+    // Only update cache on initial load
     if (tokens !== cachedTokens) {
         cachedTokens = tokens;
     }
@@ -64,7 +64,7 @@ function renderTokens(tokens) {
     document.getElementById('enabledTokens').textContent = tokens.filter(t => t.enable).length;
     document.getElementById('disabledTokens').textContent = tokens.filter(t => !t.enable).length;
     
-    // 根据筛选条件过滤
+    // Filter based on conditions
     let filteredTokens = tokens;
     if (currentFilter === 'enabled') {
         filteredTokens = tokens.filter(t => t.enable);
@@ -74,9 +74,9 @@ function renderTokens(tokens) {
     
     const tokenList = document.getElementById('tokenList');
     if (filteredTokens.length === 0) {
-        const emptyText = currentFilter === 'all' ? '暂无Token' :
-                          currentFilter === 'enabled' ? '暂无启用的Token' : '暂无禁用的Token';
-        const emptyHint = currentFilter === 'all' ? '点击上方OAuth按钮添加Token' : '点击上方"总数"查看全部';
+        const emptyText = currentFilter === 'all' ? 'No Tokens' :
+                          currentFilter === 'enabled' ? 'No enabled tokens' : 'No disabled tokens';
+        const emptyHint = currentFilter === 'all' ? 'Click OAuth button above to add tokens' : 'Click "Total" above to view all';
         tokenList.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">📦</div>
@@ -87,7 +87,7 @@ function renderTokens(tokens) {
         return;
     }
     
-    // 收集需要自动刷新的过期 Token
+    // Collect expired tokens that need auto-refresh
     const expiredTokensToRefresh = [];
     
     tokenList.innerHTML = filteredTokens.map((token, index) => {
@@ -97,16 +97,16 @@ function renderTokens(tokens) {
         const expireStr = expireTime.toLocaleString('zh-CN', {month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'});
         const cardId = token.refresh_token.substring(0, 8);
         
-        // 计算在原始列表中的序号（基于添加顺序）
+        // Calculate index in original list (based on add order)
         const originalIndex = cachedTokens.findIndex(t => t.refresh_token === token.refresh_token);
         const tokenNumber = originalIndex + 1;
         
-        // 如果已过期且启用状态，加入待刷新列表
+        // If expired and enabled, add to refresh queue
         if (isExpired && token.enable && !isRefreshing) {
             expiredTokensToRefresh.push(token.refresh_token);
         }
         
-        // 转义所有用户数据防止 XSS
+        // Escape all user data to prevent XSS
         const safeRefreshToken = escapeJs(token.refresh_token);
         const safeAccessTokenSuffix = escapeHtml(token.access_token_suffix || '');
         const safeProjectId = escapeHtml(token.projectId || '');
@@ -118,10 +118,10 @@ function renderTokens(tokens) {
         <div class="token-card ${!token.enable ? 'disabled' : ''} ${isExpired ? 'expired' : ''} ${isRefreshing ? 'refreshing' : ''} ${skipAnimation ? 'no-animation' : ''}" id="card-${escapeHtml(cardId)}">
             <div class="token-header">
                 <span class="status ${token.enable ? 'enabled' : 'disabled'}">
-                    ${token.enable ? '✅ 启用' : '❌ 禁用'}
+                    ${token.enable ? '✅ Enabled' : '❌ Disabled'}
                 </span>
                 <div class="token-header-right">
-                    <button class="btn-icon" onclick="showTokenDetail('${safeRefreshToken}')" title="编辑全部">✏️</button>
+                    <button class="btn-icon" onclick="showTokenDetail('${safeRefreshToken}')" title="Edit All">✏️</button>
                     <span class="token-id">#${tokenNumber}</span>
                 </div>
             </div>
@@ -130,35 +130,35 @@ function renderTokens(tokens) {
                     <span class="info-label">🎫</span>
                     <span class="info-value sensitive-info" title="${safeAccessTokenSuffix}">${safeAccessTokenSuffix}</span>
                 </div>
-                <div class="info-row editable sensitive-row" onclick="editField(event, '${safeRefreshToken}', 'projectId', '${safeProjectIdJs}')" title="点击编辑">
+                <div class="info-row editable sensitive-row" onclick="editField(event, '${safeRefreshToken}', 'projectId', '${safeProjectIdJs}')" title="Click to edit">
                     <span class="info-label">📦</span>
-                    <span class="info-value sensitive-info">${safeProjectId || '点击设置'}</span>
+                    <span class="info-value sensitive-info">${safeProjectId || 'Click to set'}</span>
                     <span class="info-edit-icon">✏️</span>
                 </div>
-                <div class="info-row editable sensitive-row" onclick="editField(event, '${safeRefreshToken}', 'email', '${safeEmailJs}')" title="点击编辑">
+                <div class="info-row editable sensitive-row" onclick="editField(event, '${safeRefreshToken}', 'email', '${safeEmailJs}')" title="Click to edit">
                     <span class="info-label">📧</span>
-                    <span class="info-value sensitive-info">${safeEmail || '点击设置'}</span>
+                    <span class="info-value sensitive-info">${safeEmail || 'Click to set'}</span>
                     <span class="info-edit-icon">✏️</span>
                 </div>
                 <div class="info-row ${isExpired ? 'expired-text' : ''}" id="expire-row-${escapeHtml(cardId)}">
                     <span class="info-label">⏰</span>
-                    <span class="info-value">${isRefreshing ? '🔄 刷新中...' : escapeHtml(expireStr)}${isExpired && !isRefreshing ? ' (已过期)' : ''}</span>
-                    <button class="btn-icon btn-refresh" onclick="manualRefreshToken('${safeRefreshToken}')" title="刷新Token" ${isRefreshing ? 'disabled' : ''}>🔄</button>
+                    <span class="info-value">${isRefreshing ? '🔄 Refreshing...' : escapeHtml(expireStr)}${isExpired && !isRefreshing ? ' (Expired)' : ''}</span>
+                    <button class="btn-icon btn-refresh" onclick="manualRefreshToken('${safeRefreshToken}')" title="Refresh Token" ${isRefreshing ? 'disabled' : ''}>🔄</button>
                 </div>
             </div>
             <div class="token-quota-inline" id="quota-inline-${escapeHtml(cardId)}">
                 <div class="quota-inline-header" onclick="toggleQuotaExpand('${escapeJs(cardId)}', '${safeRefreshToken}')">
-                    <span class="quota-inline-summary" id="quota-summary-${escapeHtml(cardId)}">📊 加载中...</span>
+                    <span class="quota-inline-summary" id="quota-summary-${escapeHtml(cardId)}">📊 Loading...</span>
                     <span class="quota-inline-toggle" id="quota-toggle-${escapeHtml(cardId)}">▼</span>
                 </div>
                 <div class="quota-inline-detail hidden" id="quota-detail-${escapeHtml(cardId)}"></div>
             </div>
             <div class="token-actions">
-                <button class="btn btn-info btn-xs" onclick="showQuotaModal('${safeRefreshToken}')" title="查看额度">📊 详情</button>
-                <button class="btn ${token.enable ? 'btn-warning' : 'btn-success'} btn-xs" onclick="toggleToken('${safeRefreshToken}', ${!token.enable})" title="${token.enable ? '禁用' : '启用'}">
-                    ${token.enable ? '⏸️ 禁用' : '▶️ 启用'}
+                <button class="btn btn-info btn-xs" onclick="showQuotaModal('${safeRefreshToken}')" title="View Quota">📊 Details</button>
+                <button class="btn ${token.enable ? 'btn-warning' : 'btn-success'} btn-xs" onclick="toggleToken('${safeRefreshToken}', ${!token.enable})" title="${token.enable ? 'Disable' : 'Enable'}">
+                    ${token.enable ? '⏸️ Disable' : '▶️ Enable'}
                 </button>
-                <button class="btn btn-danger btn-xs" onclick="deleteToken('${safeRefreshToken}')" title="删除">🗑️ 删除</button>
+                <button class="btn btn-danger btn-xs" onclick="deleteToken('${safeRefreshToken}')" title="Delete">🗑️ Delete</button>
             </div>
         </div>
     `}).join('');
@@ -169,10 +169,10 @@ function renderTokens(tokens) {
     
     updateSensitiveInfoDisplay();
     
-    // 重置动画跳过标志
+    // Reset animation skip flag
     skipAnimation = false;
     
-    // 自动刷新过期的 Token
+    // Auto-refresh expired tokens
     if (expiredTokensToRefresh.length > 0) {
         expiredTokensToRefresh.forEach(refreshToken => {
             autoRefreshToken(refreshToken);
@@ -180,29 +180,29 @@ function renderTokens(tokens) {
     }
 }
 
-// 手动刷新 Token
+// Manual refresh token
 async function manualRefreshToken(refreshToken) {
     if (refreshingTokens.has(refreshToken)) {
-        showToast('该 Token 正在刷新中', 'warning');
+        showToast('This token is already refreshing', 'warning');
         return;
     }
     await autoRefreshToken(refreshToken);
 }
 
-// 自动刷新过期 Token
+// Auto-refresh expired token
 async function autoRefreshToken(refreshToken) {
     if (refreshingTokens.has(refreshToken)) return;
     
     refreshingTokens.add(refreshToken);
     const cardId = refreshToken.substring(0, 8);
     
-    // 更新 UI 显示刷新中状态
+    // Update UI to show refreshing state
     const card = document.getElementById(`card-${cardId}`);
     const expireRow = document.getElementById(`expire-row-${cardId}`);
     if (card) card.classList.add('refreshing');
     if (expireRow) {
         const valueSpan = expireRow.querySelector('.info-value');
-        if (valueSpan) valueSpan.textContent = '🔄 刷新中...';
+        if (valueSpan) valueSpan.textContent = '🔄 Refreshing...';
     }
     
     try {
@@ -213,28 +213,28 @@ async function autoRefreshToken(refreshToken) {
         
         const data = await response.json();
         if (data.success) {
-            showToast('Token 已自动刷新', 'success');
-            // 刷新成功后重新加载列表
+            showToast('Token auto-refreshed', 'success');
+            // Reload list after successful refresh
             refreshingTokens.delete(refreshToken);
             loadTokens();
         } else {
-            showToast(`Token 刷新失败: ${data.message || '未知错误'}`, 'error');
+            showToast(`Token refresh failed: ${data.message || 'Unknown error'}`, 'error');
             refreshingTokens.delete(refreshToken);
-            // 更新 UI 显示刷新失败
+            // Update UI to show refresh failed
             if (expireRow) {
                 const valueSpan = expireRow.querySelector('.info-value');
-                if (valueSpan) valueSpan.textContent = '❌ 刷新失败';
+                if (valueSpan) valueSpan.textContent = '❌ Refresh failed';
             }
         }
     } catch (error) {
         if (error.message !== 'Unauthorized') {
-            showToast(`Token 刷新失败: ${error.message}`, 'error');
+            showToast(`Token refresh failed: ${error.message}`, 'error');
         }
         refreshingTokens.delete(refreshToken);
-        // 更新 UI 显示刷新失败
+        // Update UI to show refresh failed
         if (expireRow) {
             const valueSpan = expireRow.querySelector('.info-value');
-            if (valueSpan) valueSpan.textContent = '❌ 刷新失败';
+            if (valueSpan) valueSpan.textContent = '❌ Refresh failed';
         }
     }
 }
@@ -244,16 +244,16 @@ function showManualModal() {
     modal.className = 'modal form-modal';
     modal.innerHTML = `
         <div class="modal-content">
-            <div class="modal-title">✏️ 手动填入Token</div>
+            <div class="modal-title">✏️ Manual Token Entry</div>
             <div class="form-row">
-                <input type="text" id="modalAccessToken" placeholder="Access Token (必填)">
-                <input type="text" id="modalRefreshToken" placeholder="Refresh Token (必填)">
-                <input type="number" id="modalExpiresIn" placeholder="过期时间(秒)" value="3599">
+                <input type="text" id="modalAccessToken" placeholder="Access Token (required)">
+                <input type="text" id="modalRefreshToken" placeholder="Refresh Token (required)">
+                <input type="number" id="modalExpiresIn" placeholder="Expiry time (seconds)" value="3599">
             </div>
-            <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 12px;">💡 过期时间默认3599秒(约1小时)</p>
+            <p style="font-size: 0.8rem; color: var(--text-light); margin-bottom: 12px;">💡 Default expiry: 3599 seconds (~1 hour)</p>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">取消</button>
-                <button class="btn btn-success" onclick="addTokenFromModal()">✅ 添加</button>
+                <button class="btn btn-secondary" onclick="this.closest('.modal').remove()">Cancel</button>
+                <button class="btn btn-success" onclick="addTokenFromModal()">✅ Add</button>
             </div>
         </div>
     `;
