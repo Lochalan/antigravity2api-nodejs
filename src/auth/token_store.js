@@ -29,7 +29,7 @@ class TokenStore {
     } catch (e) {
       // 文件不存在时创建空数组
       await fs.writeFile(this.filePath, '[]', 'utf8');
-      log.info('✓ 已创建账号配置文件');
+      log.info('Created accounts config file');
     }
   }
 
@@ -53,13 +53,13 @@ class TokenStore {
       const data = await fs.readFile(this.filePath, 'utf8');
       const parsed = JSON.parse(data || '[]');
       if (!Array.isArray(parsed)) {
-        log.warn('账号配置文件格式异常，已重置为空数组');
+        log.warn('Accounts config file format invalid, reset to empty array');
         this._cache = [];
       } else {
         this._cache = parsed;
       }
     } catch (error) {
-      log.error('读取账号配置文件失败:', error.message);
+      log.error('Failed to read accounts config file:', error.message);
       this._cache = [];
     }
     this._cacheTime = Date.now();
@@ -78,7 +78,7 @@ class TokenStore {
       this._cache = normalized;
       this._cacheTime = Date.now();
     } catch (error) {
-      log.error('保存账号配置文件失败:', error.message);
+      log.error('Failed to save accounts config file:', error.message);
       throw error;
     }
   }

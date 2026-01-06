@@ -11,16 +11,16 @@ import {
 import TokenStore from './token_store.js';
 import { TokenError } from '../utils/errors.js';
 
-// 轮询策略枚举
+// Rotation strategy enum
 const RotationStrategy = {
-  ROUND_ROBIN: 'round_robin',           // 均衡负载：每次请求切换
-  QUOTA_EXHAUSTED: 'quota_exhausted',   // 额度耗尽才切换
-  REQUEST_COUNT: 'request_count'        // 自定义次数后切换
+  ROUND_ROBIN: 'round_robin',           // Load balancing: switch on each request
+  QUOTA_EXHAUSTED: 'quota_exhausted',   // Switch only when quota exhausted
+  REQUEST_COUNT: 'request_count'        // Switch after custom request count
 };
 
 /**
- * Token 管理器
- * 负责 Token 的存储、轮询、刷新等功能
+ * Token Manager
+ * Handles token storage, rotation, refresh etc.
  */
 class TokenManager {
   /**
@@ -53,7 +53,7 @@ class TokenManager {
 
   async _initialize() {
     try {
-      log.info('正在初始化token管理器...');
+      log.info('Initializing token manager...');
       const tokenArray = await this.store.readAll();
       
       this.tokens = tokenArray.filter(token => token.enable !== false).map(token => ({
@@ -69,22 +69,22 @@ class TokenManager {
       this.loadRotationConfig();
       
       if (this.tokens.length === 0) {
-        log.warn('⚠ 暂无可用账号，请使用以下方式添加：');
-        log.warn('  方式1: 运行 npm run login 命令登录');
-        log.warn('  方式2: 访问前端管理页面添加账号');
+        log.warn('No available accounts. Add using:');
+        log.warn('  Option 1: Run npm run login');
+        log.warn('  Option 2: Use web admin panel');
       } else {
-        log.info(`成功加载 ${this.tokens.length} 个可用token`);
+        log.info(`Loaded ${this.tokens.length} available tokens`);
         if (this.rotationStrategy === RotationStrategy.REQUEST_COUNT) {
-          log.info(`轮询策略: ${this.rotationStrategy}, 每token请求 ${this.requestCountPerToken} 次后切换`);
+          log.info(`Rotation strategy: ${this.rotationStrategy}, switch after ${this.requestCountPerToken} requests per token`);
         } else {
-          log.info(`轮询策略: ${this.rotationStrategy}`);
+          log.info(`Rotation strategy: ${this.rotationStrategy}`);
         }
         
         // 并发刷新所有过期的 token
         await this._refreshExpiredTokensConcurrently();
       }
     } catch (error) {
-      log.error('初始化token失败:', error.message);
+      log.error('Failed to initialize tokens:', error.message);
       this.tokens = [];
     }
   }
@@ -99,7 +99,7 @@ class TokenManager {
       return;
     }
 
-    log.info(`发现 ${expiredTokens.length} 个过期token，开始并发刷新...`);
+    log.info(`Found ${expiredTokens.length} expired tokens, starting concurrent refresh...`);
     const startTime = Date.now();
 
     const results = await Promise.allSettled(
@@ -121,7 +121,7 @@ class TokenManager {
         }
       } else {
         failCount++;
-        log.error(`...${token.access_token?.slice(-8) || 'unknown'} 刷新失败:`, result.reason?.message || result.reason);
+        log.error(`...${token.access_token?.slice(-8) || 'unknown'} refresh failed:`, result.reason?.message || result.reason);
       }
     });
 
@@ -131,7 +131,7 @@ class TokenManager {
     }
 
     const elapsed = Date.now() - startTime;
-    log.info(`并发刷新完成: 成功 ${successCount}, 失败 ${failCount}, 耗时 ${elapsed}ms`);
+    log.info(`Concurrent refresh done: success ${successCount}, failed ${failCount}, took ${elapsed}ms`);
   }
 
   /**
@@ -146,7 +146,7 @@ class TokenManager {
       return 'success';
     } catch (error) {
       if (error.statusCode === 403 || error.statusCode === 400) {
-        log.warn(`...${token.access_token?.slice(-8) || 'unknown'}: Token 已失效，将被禁用`);
+        log.warn(`...${token.access_token?.slice(-8) || 'unknown'}: Token invalid, will be disabled`);
         return 'disable';
       }
       throw error;
@@ -169,7 +169,7 @@ class TokenManager {
         this.requestCountPerToken = jsonConfig.rotation.requestCount || 10;
       }
     } catch (error) {
-      log.warn('加载轮询配置失败，使用默认值:', error.message);
+      log.warn('Failed to load rotation config, using defaults:', error.message);
     }
   }
 
@@ -184,9 +184,9 @@ class TokenManager {
     // 重置计数器
     this.tokenRequestCounts.clear();
     if (this.rotationStrategy === RotationStrategy.REQUEST_COUNT) {
-      log.info(`轮询策略已更新: ${this.rotationStrategy}, 每token请求 ${this.requestCountPerToken} 次后切换`);
+      log.info(`Rotation strategy updated: ${this.rotationStrategy}, switch after ${this.requestCountPerToken} requests per token`);
     } else {
-      log.info(`轮询策略已更新: ${this.rotationStrategy}`);
+      log.info(`Rotation strategy updated: ${this.rotationStrategy}`);
     }
   }
 
@@ -245,7 +245,7 @@ class TokenManager {
   }
 
   async refreshToken(token) {
-    log.info('正在刷新token...');
+    log.info('Refreshing token...');
     const body = new URLSearchParams({
       client_id: OAUTH_CONFIG.CLIENT_ID,
       client_secret: OAUTH_CONFIG.CLIENT_SECRET,
@@ -283,12 +283,12 @@ class TokenManager {
   saveToFile(tokenToUpdate = null) {
     // 保持与旧接口同步调用方式一致，内部使用异步写入
     this.store.mergeActiveTokens(this.tokens, tokenToUpdate).catch((error) => {
-      log.error('保存账号配置文件失败:', error.message);
+      log.error('Failed to save accounts config file:', error.message);
     });
   }
 
   disableToken(token) {
-    log.warn(`禁用token ...${token.access_token.slice(-8)}`)
+    log.warn(`Disabling token ...${token.access_token.slice(-8)}`)
     token.enable = false;
     this.saveToFile();
     this.tokens = this.tokens.filter(t => t.refresh_token !== token.refresh_token);
@@ -341,7 +341,7 @@ class TokenManager {
   markQuotaExhausted(token) {
     token.hasQuota = false;
     this.saveToFile(token);
-    log.warn(`...${token.access_token.slice(-8)}: 额度已耗尽，标记为无额度`);
+    log.warn(`...${token.access_token.slice(-8)}: Quota exhausted, marked as no quota`);
     
     if (this.rotationStrategy === RotationStrategy.QUOTA_EXHAUSTED) {
       const tokenIndex = this.tokens.findIndex(t => t.refresh_token === token.refresh_token);
@@ -356,7 +356,7 @@ class TokenManager {
   restoreQuota(token) {
     token.hasQuota = true;
     this.saveToFile(token);
-    log.info(`...${token.access_token.slice(-8)}: 额度已恢复`);
+    log.info(`...${token.access_token.slice(-8)}: Quota restored`);
   }
 
   /**
@@ -376,11 +376,11 @@ class TokenManager {
       if (config.skipProjectIdFetch) {
         token.projectId = generateProjectId();
         this.saveToFile(token);
-        log.info(`...${token.access_token.slice(-8)}: 使用随机生成的projectId: ${token.projectId}`);
+        log.info(`...${token.access_token.slice(-8)}: Using randomly generated projectId: ${token.projectId}`);
       } else {
         const projectId = await this.fetchProjectId(token);
         if (projectId === undefined) {
-          log.warn(`...${token.access_token.slice(-8)}: 无资格获取projectId，禁用账号`);
+          log.warn(`...${token.access_token.slice(-8)}: No permission to get projectId, disabling account`);
           return 'disable';
         }
         token.projectId = projectId;
@@ -401,10 +401,10 @@ class TokenManager {
   _handleTokenError(error, token) {
     const suffix = token.access_token?.slice(-8) || 'unknown';
     if (error.statusCode === 403 || error.statusCode === 400) {
-      log.warn(`...${suffix}: Token 已失效或错误，已自动禁用该账号`);
+      log.warn(`...${suffix}: Token invalid or error, account auto-disabled`);
       return 'disable';
     }
-    log.error(`...${suffix} 操作失败:`, error.message);
+    log.error(`...${suffix} operation failed:`, error.message);
     return 'skip';
   }
 
@@ -413,7 +413,7 @@ class TokenManager {
    * @private
    */
   _resetAllQuotas() {
-    log.warn('所有token额度已耗尽，重置额度状态');
+    log.warn('All token quotas exhausted, resetting quota state');
     this.tokens.forEach(t => {
       t.hasQuota = true;
     });
@@ -540,7 +540,7 @@ class TokenManager {
   async reload() {
     this._initPromise = this._initialize();
     await this._initPromise;
-    log.info('Token已热重载');
+    log.info('Tokens hot-reloaded');
   }
 
   async addToken(tokenData) {
@@ -571,7 +571,7 @@ class TokenManager {
       await this.reload();
       return { success: true, message: 'Token添加成功' };
     } catch (error) {
-      log.error('添加Token失败:', error.message);
+      log.error('Failed to add token:', error.message);
       return { success: false, message: error.message };
     }
   }
@@ -591,7 +591,7 @@ class TokenManager {
       await this.reload();
       return { success: true, message: 'Token更新成功' };
     } catch (error) {
-      log.error('更新Token失败:', error.message);
+      log.error('Failed to update token:', error.message);
       return { success: false, message: error.message };
     }
   }
@@ -610,7 +610,7 @@ class TokenManager {
       await this.reload();
       return { success: true, message: 'Token删除成功' };
     } catch (error) {
-      log.error('删除Token失败:', error.message);
+      log.error('Failed to delete token:', error.message);
       return { success: false, message: error.message };
     }
   }
@@ -631,7 +631,7 @@ class TokenManager {
         hasQuota: token.hasQuota !== false
       }));
     } catch (error) {
-      log.error('获取Token列表失败:', error.message);
+      log.error('Failed to get token list:', error.message);
       return [];
     }
   }
