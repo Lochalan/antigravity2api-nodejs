@@ -1,4 +1,4 @@
-// OpenAI 格式转换工具
+// OpenAI format converter
 import config from '../../config/config.js';
 import { extractSystemInstruction } from '../utils.js';
 import { convertOpenAIToolsToAntigravity } from '../toolConverter.js';

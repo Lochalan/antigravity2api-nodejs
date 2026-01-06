@@ -65,6 +65,11 @@ async function loadConfig() {
                 if (form.elements['DEFAULT_MAX_TOKENS']) form.elements['DEFAULT_MAX_TOKENS'].value = json.defaults.maxTokens ?? '';
                 if (form.elements['DEFAULT_THINKING_BUDGET']) form.elements['DEFAULT_THINKING_BUDGET'].value = json.defaults.thinkingBudget ?? '';
             }
+            if (json.reasoningEffort) {
+                if (form.elements['REASONING_EFFORT_LOW']) form.elements['REASONING_EFFORT_LOW'].value = json.reasoningEffort.low ?? '';
+                if (form.elements['REASONING_EFFORT_MEDIUM']) form.elements['REASONING_EFFORT_MEDIUM'].value = json.reasoningEffort.medium ?? '';
+                if (form.elements['REASONING_EFFORT_HIGH']) form.elements['REASONING_EFFORT_HIGH'].value = json.reasoningEffort.high ?? '';
+            }
             if (json.other) {
                 if (form.elements['TIMEOUT']) form.elements['TIMEOUT'].value = json.other.timeout ?? '';
                 if (form.elements['RETRY_TIMES']) form.elements['RETRY_TIMES'].value = json.other.retryTimes ?? '';
@@ -72,6 +77,7 @@ async function loadConfig() {
                 if (form.elements['USE_NATIVE_AXIOS']) form.elements['USE_NATIVE_AXIOS'].checked = json.other.useNativeAxios !== false;
                 if (form.elements['USE_CONTEXT_SYSTEM_PROMPT']) form.elements['USE_CONTEXT_SYSTEM_PROMPT'].checked = json.other.useContextSystemPrompt || false;
                 if (form.elements['PASS_SIGNATURE_TO_CLIENT']) form.elements['PASS_SIGNATURE_TO_CLIENT'].checked = json.other.passSignatureToClient || false;
+                if (form.elements['DISABLE_SERVER_CACHE']) form.elements['DISABLE_SERVER_CACHE'].checked = json.other.disableServerCache || false;
             }
             if (json.rotation) {
                 if (form.elements['ROTATION_STRATEGY']) {
@@ -102,6 +108,7 @@ async function saveConfig(e) {
         server: {},
         api: {},
         defaults: {},
+        reasoningEffort: {},
         other: {},
         rotation: {}
     };
@@ -111,6 +118,7 @@ async function saveConfig(e) {
     jsonConfig.other.useNativeAxios = form.elements['USE_NATIVE_AXIOS']?.checked || false;
     jsonConfig.other.useContextSystemPrompt = form.elements['USE_CONTEXT_SYSTEM_PROMPT']?.checked || false;
     jsonConfig.other.passSignatureToClient = form.elements['PASS_SIGNATURE_TO_CLIENT']?.checked || false;
+    jsonConfig.other.disableServerCache = form.elements['DISABLE_SERVER_CACHE']?.checked || false;
     
     Object.entries(allConfig).forEach(([key, value]) => {
         if (sensitiveKeys.includes(key)) {
@@ -128,6 +136,18 @@ async function saveConfig(e) {
             else if (key === 'DEFAULT_THINKING_BUDGET') {
                 const num = parseInt(value);
                 jsonConfig.defaults.thinkingBudget = Number.isNaN(num) ? undefined : num;
+            }
+            else if (key === 'REASONING_EFFORT_LOW') {
+                const num = parseInt(value);
+                jsonConfig.reasoningEffort.low = Number.isNaN(num) ? undefined : num;
+            }
+            else if (key === 'REASONING_EFFORT_MEDIUM') {
+                const num = parseInt(value);
+                jsonConfig.reasoningEffort.medium = Number.isNaN(num) ? undefined : num;
+            }
+            else if (key === 'REASONING_EFFORT_HIGH') {
+                const num = parseInt(value);
+                jsonConfig.reasoningEffort.high = Number.isNaN(num) ? undefined : num;
             }
             else if (key === 'TIMEOUT') jsonConfig.other.timeout = parseInt(value) || undefined;
             else if (key === 'RETRY_TIMES') {

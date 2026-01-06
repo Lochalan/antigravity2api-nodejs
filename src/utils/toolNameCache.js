@@ -1,5 +1,5 @@
-// 工具名称映射缓存：按 sessionId + model + safeName 维度
-// 解决：发送到上游时工具名必须 sanitize，返回时需要还原为原始工具名
+// Tool name mapping cache: keyed by sessionId + model + safeName
+// Purpose: Tool names must be sanitized when sent upstream, but need to be restored to original names on response
 
 import memoryManager, { MemoryPressure } from './memoryManager.js';
 
@@ -7,8 +7,8 @@ import memoryManager, { MemoryPressure } from './memoryManager.js';
 const toolNameMap = new Map();
 
 const MAX_ENTRIES = 512;
-const ENTRY_TTL_MS = 30 * 60 * 1000;      // 30 分钟
-const CLEAN_INTERVAL_MS = 10 * 60 * 1000; // 每 10 分钟扫一遍
+const ENTRY_TTL_MS = 30 * 60 * 1000;      // 30 minutes
+const CLEAN_INTERVAL_MS = 10 * 60 * 1000; // Clean every 10 minutes
 
 function makeKey(sessionId, model, safeName) {
   return `${sessionId || ''}::${model || ''}::${safeName || ''}`;
@@ -34,7 +34,7 @@ function pruneExpired(now) {
   }
 }
 
-// 按内存压力收缩缓存
+// Shrink cache based on memory pressure
 memoryManager.registerCleanup((pressure) => {
   if (pressure === MemoryPressure.MEDIUM) {
     pruneSize(Math.floor(MAX_ENTRIES / 2));
@@ -45,7 +45,7 @@ memoryManager.registerCleanup((pressure) => {
   }
 });
 
-// 定时按 TTL 清理
+// Periodic TTL cleanup
 setInterval(() => {
   const now = Date.now();
   pruneExpired(now);

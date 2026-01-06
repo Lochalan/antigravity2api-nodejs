@@ -1,4 +1,4 @@
-// Claude 格式转换工具
+// Claude format converter
 import config from '../../config/config.js';
 import { convertClaudeToolsToAntigravity } from '../toolConverter.js';
 import {

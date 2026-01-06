@@ -13,7 +13,8 @@ import {
   DEFAULT_MAX_REQUEST_SIZE,
   DEFAULT_MAX_IMAGES,
   MODEL_LIST_CACHE_TTL,
-  DEFAULT_GENERATION_PARAMS
+  DEFAULT_GENERATION_PARAMS,
+  REASONING_EFFORT_MAP
 } from '../constants/index.js';
 
 // Cache for generated credentials
@@ -150,6 +151,11 @@ export function buildConfig(jsonConfig) {
       top_k: jsonConfig.defaults?.topK ?? DEFAULT_GENERATION_PARAMS.top_k,
       max_tokens: jsonConfig.defaults?.maxTokens ?? DEFAULT_GENERATION_PARAMS.max_tokens,
       thinking_budget: jsonConfig.defaults?.thinkingBudget ?? DEFAULT_GENERATION_PARAMS.thinking_budget
+    },
+    reasoningEffort: {
+      low: jsonConfig.reasoningEffort?.low ?? REASONING_EFFORT_MAP.low,
+      medium: jsonConfig.reasoningEffort?.medium ?? REASONING_EFFORT_MAP.medium,
+      high: jsonConfig.reasoningEffort?.high ?? REASONING_EFFORT_MAP.high
     },
     security: {
       maxRequestSize: jsonConfig.server?.maxRequestSize || DEFAULT_MAX_REQUEST_SIZE,

@@ -1,10 +1,10 @@
-// 通用工具函数
+// Common utility functions
 import config from '../config/config.js';
 import os from 'os';
-import { REASONING_EFFORT_MAP, DEFAULT_STOP_SEQUENCES } from '../constants/index.js';
+import { DEFAULT_STOP_SEQUENCES } from '../constants/index.js';
 import { toGenerationConfig } from './parameterNormalizer.js';
 
-// ==================== 签名常量 ====================
+// ==================== Signature Constants ====================
 const CLAUDE_THOUGHT_SIGNATURE = null;
 const GEMINI_THOUGHT_SIGNATURE = null;
 const CLAUDE_TOOL_SIGNATURE = null;
@@ -26,7 +26,7 @@ export function getToolSignatureForModel(actualModelName) {
   return CLAUDE_TOOL_SIGNATURE;
 }
 
-// ==================== 工具名称规范化 ====================
+// ==================== Tool Name Sanitization ====================
 export function sanitizeToolName(name) {
   if (!name || typeof name !== 'string') return 'tool';
   let cleaned = name.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -36,7 +36,7 @@ export function sanitizeToolName(name) {
   return cleaned;
 }
 
-// ==================== 参数清理 ====================
+// ==================== Parameter Cleaning ====================
 const EXCLUDED_KEYS = new Set([
   '$schema', '$ref', 'additionalProperties', 'minLength', 'maxLength',
   'minItems', 'maxItems', 'uniqueItems', 'exclusiveMaximum',
@@ -117,9 +117,9 @@ export function isEnableThinking(modelName) {
     modelName === 'gpt-oss-120b-medium';
 }
 
-// ==================== 生成配置 ====================
+// ==================== Generation Config ====================
 export function generateGenerationConfig(parameters, enableThinking, actualModelName) {
-  // 使用 config.defaults 兜底
+  // Use config.defaults as fallback
   const normalizedParams = {
     temperature: parameters.temperature ?? config.defaults.temperature,
     top_p: parameters.top_p ?? config.defaults.top_p,
@@ -128,22 +128,22 @@ export function generateGenerationConfig(parameters, enableThinking, actualModel
     thinking_budget: parameters.thinking_budget,
   };
 
-  // 处理 reasoning_effort 到 thinking_budget 的转换
+  // Convert reasoning_effort to thinking_budget
   if (normalizedParams.thinking_budget === undefined && parameters.reasoning_effort !== undefined) {
     const defaultThinkingBudget = config.defaults.thinking_budget ?? 1024;
-    normalizedParams.thinking_budget = REASONING_EFFORT_MAP[parameters.reasoning_effort] ?? defaultThinkingBudget;
+    normalizedParams.thinking_budget = config.reasoningEffort[parameters.reasoning_effort] ?? defaultThinkingBudget;
   }
 
-  // 使用统一的参数转换函数
+  // Use unified parameter conversion function
   const generationConfig = toGenerationConfig(normalizedParams, enableThinking, actualModelName);
   
-  // 添加 stopSequences
+  // Add stopSequences
   generationConfig.stopSequences = DEFAULT_STOP_SEQUENCES;
   
   return generationConfig;
 }
 
-// ==================== System 指令提取 ====================
+// ==================== System Instruction Extraction ====================
 export function extractSystemInstruction(openaiMessages) {
   const baseSystem = config.systemInstruction || '';
   if (!config.useContextSystemPrompt) return baseSystem;
@@ -168,7 +168,7 @@ export function extractSystemInstruction(openaiMessages) {
   return parts.join('\n\n');
 }
 
-// ==================== 图片请求准备 ====================
+// ==================== Image Request Preparation ====================
 export function prepareImageRequest(requestBody) {
   if (!requestBody || !requestBody.request) return requestBody;
   let imageSize = "1K";
@@ -195,7 +195,7 @@ export function prepareImageRequest(requestBody) {
   return requestBody;
 }
 
-// ==================== 其他工具 ====================
+// ==================== Other Utilities ====================
 export function getDefaultIp() {
   const interfaces = os.networkInterfaces();
   if (interfaces.WLAN) {
@@ -214,7 +214,7 @@ export function getDefaultIp() {
   return '127.0.0.1';
 }
 
-// 重导出主要函数
+// Re-export main functions
 export { generateRequestId } from './idGenerator.js';
 export { generateRequestBody } from './converters/openai.js';
 export { generateClaudeRequestBody } from './converters/claude.js';

@@ -16,16 +16,16 @@ import {
 } from './stream_parser.js';
 import { setReasoningSignature, setToolSignature } from '../utils/thoughtSignatureCache.js';
 
-// 请求客户端：优先使用 AntigravityRequester，失败则降级到 axios
+// Request client: prefer AntigravityRequester, fallback to axios on failure
 let requester = null;
 let useAxios = false;
 
-// ==================== 模型列表缓存（智能管理） ====================
-// 缓存过期时间根据内存压力动态调整
+// ==================== Model List Cache (Smart Management) ====================
+// Cache TTL dynamically adjusted based on memory pressure
 const getModelCacheTTL = () => {
   const baseTTL = config.cache?.modelListTTL || MODEL_LIST_CACHE_TTL;
   const pressure = memoryManager.currentPressure;
-  // 高压力时缩短缓存时间
+  // Shorten cache time under high pressure
   if (pressure === MemoryPressure.CRITICAL) return Math.min(baseTTL, 5 * 60 * 1000);
   if (pressure === MemoryPressure.HIGH) return Math.min(baseTTL, 15 * 60 * 1000);
   return baseTTL;
@@ -34,7 +34,7 @@ const getModelCacheTTL = () => {
 let modelListCache = null;
 let modelListCacheTime = 0;
 
-// 默认模型列表（当 API 请求失败时使用）
+// Default model list (used when API request fails)
 const DEFAULT_MODELS = [
   'claude-opus-4-5',
   'claude-opus-4-5-thinking',
@@ -55,7 +55,7 @@ const DEFAULT_MODELS = [
   'chat_23310'
 ];
 
-// 生成默认模型列表响应
+// Generate default model list response
 function getDefaultModelList() {
   const created = Math.floor(Date.now() / 1000);
   return {
@@ -75,18 +75,18 @@ if (config.useNativeAxios === true) {
   try {
     requester = new AntigravityRequester();
   } catch (error) {
-    console.warn('AntigravityRequester 初始化失败，降级使用 axios:', error.message);
+    console.warn('AntigravityRequester init failed, falling back to axios:', error.message);
     useAxios = true;
   }
 }
 
-// 注册对象池与模型缓存的内存清理回调
+// Register memory cleanup callbacks for object pools and model cache
 function registerMemoryCleanup() {
-  // 由流式解析模块管理自身对象池大小
+  // Stream parser module manages its own object pool size
   registerStreamMemoryCleanup();
 
   memoryManager.registerCleanup((pressure) => {
-    // 高压力或紧急时清理模型缓存
+    // Clear model cache under high or critical pressure
     if (pressure === MemoryPressure.HIGH || pressure === MemoryPressure.CRITICAL) {
       const ttl = getModelCacheTTL();
       const now = Date.now();
@@ -105,10 +105,10 @@ function registerMemoryCleanup() {
   });
 }
 
-// 初始化时注册清理回调
+// Register cleanup callbacks on init
 registerMemoryCleanup();
 
-// ==================== 辅助函数 ====================
+// ==================== Helper Functions ====================
 
 function buildHeaders(token) {
   return {
@@ -132,7 +132,7 @@ function buildRequesterConfig(headers, body = null) {
 }
 
 
-// 统一错误处理
+// Unified error handling
 async function handleApiError(error, token) {
   const status = error.response?.status || error.status || error.statusCode || 500;
   let errorBody = error.message;
@@ -151,29 +151,29 @@ async function handleApiError(error, token) {
   
   if (status === 403) {
     if (JSON.stringify(errorBody).includes("The caller does not")){
-      throw createApiError(`超出模型最大上下文。错误详情: ${errorBody}`, status, errorBody);
+      throw createApiError(`Exceeded model max context. Error details: ${errorBody}`, status, errorBody);
     }
     tokenManager.disableCurrentToken(token);
-    throw createApiError(`该账号没有使用权限，已自动禁用。错误详情: ${errorBody}`, status, errorBody);
+    throw createApiError(`This account has no permission, auto-disabled. Error details: ${errorBody}`, status, errorBody);
   }
   
-  throw createApiError(`API请求失败 (${status}): ${errorBody}`, status, errorBody);
+  throw createApiError(`API request failed (${status}): ${errorBody}`, status, errorBody);
 }
 
 
-// ==================== 导出函数 ====================
+// ==================== Exported Functions ====================
 
 export async function generateAssistantResponse(requestBody, token, callback) {
   
   const headers = buildHeaders(token);
-  // 在 state 中临时缓存思维链签名，供流式多片段复用，并携带 session 与 model 信息以写入全局缓存
+  // Temporarily cache thinking signature in state for multi-chunk reuse, with session and model info for global cache
   const state = {
     toolCalls: [],
     reasoningSignature: null,
     sessionId: requestBody.request?.sessionId,
     model: requestBody.model
   };
-  const lineBuffer = getLineBuffer(); // 从对象池获取
+  const lineBuffer = getLineBuffer(); // Get from object pool
   
   const processChunk = (chunk) => {
     const lines = lineBuffer.append(chunk);
@@ -191,14 +191,14 @@ export async function generateAssistantResponse(requestBody, token, callback) {
         data: requestBody
       });
       
-      // 使用 Buffer 直接处理，避免 toString 的内存分配
+      // Use Buffer directly to avoid toString memory allocation
       response.data.on('data', chunk => {
         processChunk(typeof chunk === 'string' ? chunk : chunk.toString('utf8'));
       });
       
       await new Promise((resolve, reject) => {
         response.data.on('end', () => {
-          releaseLineBuffer(lineBuffer); // 归还到对象池
+          releaseLineBuffer(lineBuffer); // Return to object pool
           resolve();
         });
         response.data.on('error', reject);
@@ -219,7 +219,7 @@ export async function generateAssistantResponse(requestBody, token, callback) {
             }
           })
           .onEnd(() => {
-            releaseLineBuffer(lineBuffer); // 归还到对象池
+            releaseLineBuffer(lineBuffer); // Return to object pool
             if (statusCode !== 200) {
               reject({ status: statusCode, message: errorBody });
             } else {
@@ -230,12 +230,12 @@ export async function generateAssistantResponse(requestBody, token, callback) {
       });
     }
   } catch (error) {
-    releaseLineBuffer(lineBuffer); // 确保归还
+    releaseLineBuffer(lineBuffer); // Ensure return to pool
     await handleApiError(error, token);
   }
 }
 
-// 内部工具：从远端拉取完整模型原始数据
+// Internal helper: fetch raw model data from remote
 async function fetchRawModels(headers, token) {
   try {
     if (useAxios) {
@@ -259,7 +259,7 @@ async function fetchRawModels(headers, token) {
 }
 
 export async function getAvailableModels() {
-  // 检查缓存是否有效（动态 TTL）
+  // Check if cache is valid (dynamic TTL)
   const now = Date.now();
   const ttl = getModelCacheTTL();
   if (modelListCache && (now - modelListCacheTime) < ttl) {
@@ -268,7 +268,7 @@ export async function getAvailableModels() {
   
   const token = await tokenManager.getToken();
   if (!token) {
-    // 没有 token 时返回默认模型列表
+    // Return default model list when no token available
     logger.warn('No available token, returning default model list');
     return getDefaultModelList();
   }
@@ -276,7 +276,7 @@ export async function getAvailableModels() {
   const headers = buildHeaders(token);
   const data = await fetchRawModels(headers, token);
   if (!data) {
-    // fetchRawModels 里已经做了统一错误处理，这里兜底为默认列表
+    // fetchRawModels handles errors, fallback to default list
     return getDefaultModelList();
   }
 
@@ -288,7 +288,7 @@ export async function getAvailableModels() {
     owned_by: 'google'
   }));
   
-  // 添加默认模型（如果 API 返回的列表中没有）
+  // Add default models if not in API response
   const existingIds = new Set(modelList.map(m => m.id));
   for (const defaultModel of DEFAULT_MODELS) {
     if (!existingIds.has(defaultModel)) {
@@ -306,7 +306,7 @@ export async function getAvailableModels() {
     data: modelList
   };
   
-  // 更新缓存
+  // Update cache
   modelListCache = result;
   modelListCacheTime = now;
   const currentTTL = getModelCacheTTL();
@@ -315,7 +315,7 @@ export async function getAvailableModels() {
   return result;
 }
 
-// 清除模型列表缓存（可用于手动刷新）
+// Clear model list cache (for manual refresh)
 export function clearModelListCache() {
   modelListCache = null;
   modelListCacheTime = 0;
@@ -365,7 +365,7 @@ export async function generateAssistantResponseNoStream(requestBody, token) {
     await handleApiError(error, token);
   }
   //console.log(JSON.stringify(data));
-  // 解析响应内容
+  // Parse response content
   const parts = data.response?.candidates?.[0]?.content?.parts || [];
   let content = '';
   let reasoningContent = '';
@@ -375,7 +375,7 @@ export async function generateAssistantResponseNoStream(requestBody, token) {
   
   for (const part of parts) {
     if (part.thought === true) {
-      // 思维链内容 - 使用 DeepSeek 格式的 reasoning_content
+      // Thinking content - use DeepSeek format reasoning_content
       reasoningContent += part.text || '';
       if (part.thoughtSignature && !reasoningSignature) {
         reasoningSignature = part.thoughtSignature;
@@ -389,13 +389,13 @@ export async function generateAssistantResponseNoStream(requestBody, token) {
       }
       toolCalls.push(toolCall);
     } else if (part.inlineData) {
-      // 保存图片到本地并获取 URL
+      // Save image to local and get URL
       const imageUrl = saveBase64Image(part.inlineData.data, part.inlineData.mimeType);
       imageUrls.push(imageUrl);
     }
   }
   
-  // 提取 token 使用统计
+  // Extract token usage stats
   const usage = data.response?.usageMetadata;
   const usageData = usage ? {
     prompt_tokens: usage.promptTokenCount || 0,
@@ -403,21 +403,21 @@ export async function generateAssistantResponseNoStream(requestBody, token) {
     total_tokens: usage.totalTokenCount || 0
   } : null;
   
-  // 将新的签名写入全局缓存（按 sessionId + model），供后续请求兜底使用
+  // Write new signature to global cache (by sessionId + model) for fallback in subsequent requests
   const sessionId = requestBody.request?.sessionId;
   const model = requestBody.model;
   if (sessionId && model) {
     if (reasoningSignature) {
       setReasoningSignature(sessionId, model, reasoningSignature);
     }
-    // 工具签名：取第一个带 thoughtSignature 的工具作为缓存源
+    // Tool signature: use first tool with thoughtSignature as cache source
     const toolSig = toolCalls.find(tc => tc.thoughtSignature)?.thoughtSignature;
     if (toolSig) {
       setToolSignature(sessionId, model, toolSig);
     }
   }
 
-  // 生图模型：转换为 markdown 格式
+  // Image generation models: convert to markdown format
   if (imageUrls.length > 0) {
     let markdown = content ? content + '\n\n' : '';
     markdown += imageUrls.map(url => `![image](${url})`).join('\n\n');
@@ -462,5 +462,5 @@ export function closeRequester() {
   if (requester) requester.close();
 }
 
-// 导出内存清理注册函数（供外部调用）
+// Export memory cleanup registration function (for external use)
 export { registerMemoryCleanup };

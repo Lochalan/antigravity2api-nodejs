@@ -206,6 +206,20 @@ html.tab-settings .tab[data-tab="settings"] {
                                     <label>Thinking Budget <span class="help-tip" data-tooltip="Token budget for thinking models, affects reasoning depth">?</span></label>
                                     <input type="number" name="DEFAULT_THINKING_BUDGET" placeholder="16000">
                                 </div>
+                                <div class="form-row-inline">
+                                    <div class="form-group compact">
+                                        <label>Effort Low <span class="help-tip" data-tooltip="Token budget when client sends reasoning_effort=low">?</span></label>
+                                        <input type="number" name="REASONING_EFFORT_LOW" placeholder="1024">
+                                    </div>
+                                    <div class="form-group compact">
+                                        <label>Effort Medium <span class="help-tip" data-tooltip="Token budget when client sends reasoning_effort=medium">?</span></label>
+                                        <input type="number" name="REASONING_EFFORT_MEDIUM" placeholder="16000">
+                                    </div>
+                                    <div class="form-group compact">
+                                        <label>Effort High <span class="help-tip" data-tooltip="Token budget when client sends reasoning_effort=high. Must be less than Max Tokens!">?</span></label>
+                                        <input type="number" name="REASONING_EFFORT_HIGH" placeholder="24000">
+                                    </div>
+                                </div>
                                 <div class="form-row-inline switch-row">
                                     <div class="form-group compact switch-group">
                                         <label>Context System <span class="help-tip" data-tooltip="Merge consecutive system messages at start into SystemInstruction">?</span></label>
@@ -229,6 +243,13 @@ html.tab-settings .tab[data-tab="settings"] {
                                         <label>Pass Signature <span class="help-tip" data-tooltip="Pass thoughtSignature from response to client">?</span></label>
                                         <label class="switch">
                                             <input type="checkbox" name="PASS_SIGNATURE_TO_CLIENT">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group compact switch-group">
+                                        <label>Disable Cache <span class="help-tip" data-tooltip="Disable server-side signature caching">?</span></label>
+                                        <label class="switch">
+                                            <input type="checkbox" name="DISABLE_SERVER_CACHE">
                                             <span class="slider"></span>
                                         </label>
                                     </div>

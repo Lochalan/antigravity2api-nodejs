@@ -15,7 +15,7 @@ import { MEMORY_CHECK_INTERVAL } from '../constants/index.js';
 import { errorHandler } from '../utils/errors.js';
 import { getChunkPoolSize, clearChunkPool } from './stream.js';
 
-// 路由模块
+// Route modules
 import adminRouter from '../routes/admin.js';
 import sdRouter from '../routes/sd.js';
 import openaiRouter from '../routes/openai.js';
@@ -65,7 +65,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// SD API 路由
+// SD API routes
 app.use('/sdapi/v1', sdRouter);
 
 // ==================== API Key Verification Middleware ====================
