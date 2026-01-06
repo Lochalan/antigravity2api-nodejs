@@ -79,7 +79,7 @@ class MemoryManager {
     if (thresholdMB && thresholdMB > 0) {
       this.configuredThresholdMB = thresholdMB;
       THRESHOLDS = calculateThresholds(thresholdMB);
-      logger.info(`内存阈值已设置: ${thresholdMB}MB (LOW: ${Math.floor(THRESHOLDS.LOW/1024/1024)}MB, MEDIUM: ${Math.floor(THRESHOLDS.MEDIUM/1024/1024)}MB, HIGH: ${Math.floor(THRESHOLDS.HIGH/1024/1024)}MB)`);
+      logger.info(`Memory threshold set: ${thresholdMB}MB (LOW: ${Math.floor(THRESHOLDS.LOW/1024/1024)}MB, MEDIUM: ${Math.floor(THRESHOLDS.MEDIUM/1024/1024)}MB, HIGH: ${Math.floor(THRESHOLDS.HIGH/1024/1024)}MB)`);
     }
   }
 
@@ -111,7 +111,7 @@ class MemoryManager {
     
     // 首次立即检查
     this.check();
-    logger.info(`内存管理器已启动 (检查间隔: ${interval/1000}秒)`);
+    logger.info(`Memory manager started (check interval: ${interval/1000}s)`);
   }
 
   /**
@@ -124,7 +124,7 @@ class MemoryManager {
       this.checkInterval = null;
     }
     this.cleanupCallbacks.clear();
-    logger.info('内存管理器已停止');
+    logger.info('Memory manager stopped');
   }
 
   /**
@@ -195,7 +195,7 @@ class MemoryManager {
     
     // 压力级别变化时记录日志
     if (newPressure !== this.currentPressure) {
-      logger.info(`内存压力变化: ${this.currentPressure} -> ${newPressure} (${heapUsedMB}MB)`);
+      logger.info(`Memory pressure changed: ${this.currentPressure} -> ${newPressure} (${heapUsedMB}MB)`);
       this.currentPressure = newPressure;
     }
     
@@ -229,7 +229,7 @@ class MemoryManager {
    * 处理高压力
    */
   handleHighPressure(heapUsedMB) {
-    logger.info(`内存较高 (${heapUsedMB}MB)，执行积极清理`);
+    logger.info(`Memory high (${heapUsedMB}MB), performing aggressive cleanup`);
     this.notifyCleanup(MemoryPressure.HIGH);
     this.stats.cleanupCount++;
     
@@ -241,7 +241,7 @@ class MemoryManager {
    * 处理紧急压力
    */
   handleCriticalPressure(heapUsedMB) {
-    logger.warn(`内存紧急 (${heapUsedMB}MB)，执行紧急清理`);
+    logger.warn(`Memory critical (${heapUsedMB}MB), performing emergency cleanup`);
     this.notifyCleanup(MemoryPressure.CRITICAL);
     this.stats.cleanupCount++;
     
@@ -257,7 +257,7 @@ class MemoryManager {
       try {
         callback(pressure);
       } catch (error) {
-        logger.error('清理回调执行失败:', error.message);
+        logger.error('Cleanup callback failed:', error.message);
       }
     }
   }
@@ -283,7 +283,7 @@ class MemoryManager {
       this.lastGCTime = Date.now();
       this.stats.gcCount++;
       const after = this.getMemoryUsage().heapUsedMB;
-      logger.info(`GC 完成: ${before}MB -> ${after}MB (释放 ${(before - after).toFixed(1)}MB)`);
+      logger.info(`GC completed: ${before}MB -> ${after}MB (freed ${(before - after).toFixed(1)}MB)`);
       return true;
     }
     return false;
