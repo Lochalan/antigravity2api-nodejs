@@ -93,14 +93,14 @@ function registerMemoryCleanup() {
       if (modelListCache && (now - modelListCacheTime) > ttl) {
         modelListCache = null;
         modelListCacheTime = 0;
-        logger.info('已清理过期模型列表缓存');
+        logger.info('Expired model list cache cleaned');
       }
     }
     
     if (pressure === MemoryPressure.CRITICAL && modelListCache) {
       modelListCache = null;
       modelListCacheTime = 0;
-      logger.info('紧急清理模型列表缓存');
+      logger.info('Emergency cleanup: model list cache');
     }
   });
 }
@@ -269,7 +269,7 @@ export async function getAvailableModels() {
   const token = await tokenManager.getToken();
   if (!token) {
     // 没有 token 时返回默认模型列表
-    logger.warn('没有可用的 token，返回默认模型列表');
+    logger.warn('No available token, returning default model list');
     return getDefaultModelList();
   }
   
@@ -310,7 +310,7 @@ export async function getAvailableModels() {
   modelListCache = result;
   modelListCacheTime = now;
   const currentTTL = getModelCacheTTL();
-  logger.info(`模型列表已缓存 (有效期: ${currentTTL / 1000}秒, 模型数量: ${modelList.length})`);
+  logger.info(`Model list cached (TTL: ${currentTTL / 1000}s, count: ${modelList.length})`);
   
   return result;
 }
@@ -319,7 +319,7 @@ export async function getAvailableModels() {
 export function clearModelListCache() {
   modelListCache = null;
   modelListCacheTime = 0;
-  logger.info('模型列表缓存已清除');
+  logger.info('Model list cache cleared');
 }
 
 export async function getModelsWithQuotas(token) {

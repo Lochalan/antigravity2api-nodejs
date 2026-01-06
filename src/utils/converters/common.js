@@ -110,11 +110,23 @@ export function createThoughtPart(text, signature = null) {
  * @returns {Object} 函数调用 part
  */
 export function createFunctionCallPart(id, name, args, signature = null) {
+  // Parse string args as JSON if possible, otherwise use as-is
+  // Avoid wrapping in { query: ... } which can cause model pattern-matching issues
+  let parsedArgs = args;
+  if (typeof args === 'string') {
+    try {
+      parsedArgs = JSON.parse(args);
+    } catch {
+      // If not valid JSON, wrap in a generic object
+      parsedArgs = { input: args };
+    }
+  }
+  
   const part = {
     functionCall: {
       id,
       name,
-      args: typeof args === 'string' ? { query: args } : args
+      args: parsedArgs
     }
   };
   if (signature) {

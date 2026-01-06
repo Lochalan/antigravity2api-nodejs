@@ -135,7 +135,7 @@ export const with429Retry = async (fn, maxRetries, loggerPrefix = '') => {
       const status = Number(error.status || error.statusCode || error.response?.status);
       if (status === 429 && attempt < retries) {
         const nextAttempt = attempt + 1;
-        logger.warn(`${loggerPrefix}收到 429，正在进行第 ${nextAttempt} 次重试（共 ${retries} 次）`);
+        logger.warn(`${loggerPrefix}Got 429, retrying ${nextAttempt}/${retries}`);
         attempt = nextAttempt;
         continue;
       }
