@@ -69,7 +69,7 @@ class OAuthManager {
       }));
       return response.data?.email;
     } catch (err) {
-      log.warn('获取用户邮箱失败:', err.message);
+      log.warn('Failed to get user email:', err.message);
       return null;
     }
   }
@@ -81,29 +81,29 @@ class OAuthManager {
     // 如果配置跳过API验证，直接返回随机projectId
     if (config.skipProjectIdFetch) {
       const projectId = generateProjectId();
-      log.info('已跳过API验证，使用随机生成的projectId: ' + projectId);
+      log.info('Skipped API validation, using random projectId: ' + projectId);
       return { projectId, hasQuota: true };
     }
 
     // 尝试从API获取projectId
     try {
-      log.info('正在验证账号资格...');
+      log.info('Validating account eligibility...');
       const projectId = await tokenManager.fetchProjectId({ access_token: accessToken });
       
       if (projectId === undefined) {
         // 无资格，自动回退到随机projectId
         const randomProjectId = generateProjectId();
-        log.warn('该账号无资格使用，已自动退回无资格模式，使用随机projectId: ' + randomProjectId);
+        log.warn('Account not eligible, using random projectId: ' + randomProjectId);
         return { projectId: randomProjectId, hasQuota: false };
       }
       
-      log.info('账号验证通过，projectId: ' + projectId);
+      log.info('Account validated, projectId: ' + projectId);
       return { projectId, hasQuota: true };
     } catch (err) {
       // 获取失败时也退回到随机projectId
       const randomProjectId = generateProjectId();
-      log.warn('验证账号资格失败: ' + err.message + '，已自动退回无资格模式');
-      log.info('使用随机生成的projectId: ' + randomProjectId);
+      log.warn('Account validation failed: ' + err.message + ', using fallback mode');
+      log.info('Using random projectId: ' + randomProjectId);
       return { projectId: randomProjectId, hasQuota: false };
     }
   }
@@ -130,7 +130,7 @@ class OAuthManager {
     const email = await this.fetchUserEmail(account.access_token);
     if (email) {
       account.email = email;
-      log.info('获取到用户邮箱: ' + email);
+      log.info('Got user email: ' + email);
     }
 
     // 3. 资格校验并获取projectId

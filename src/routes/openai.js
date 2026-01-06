@@ -19,7 +19,7 @@ router.get('/models', async (req, res) => {
     const models = await getAvailableModels();
     res.json(models);
   } catch (error) {
-    logger.error('获取模型列表失败:', error.message);
+    logger.error('Failed to get model list:', error.message);
     res.status(500).json({ error: error.message });
   }
 });

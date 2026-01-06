@@ -190,7 +190,7 @@ export const handleOpenAIRequest = async (req, res) => {
       res.json(response);
     }
   } catch (error) {
-    logger.error('生成响应失败:', error.message);
+    logger.error('Failed to generate response:', error.message);
     if (res.headersSent) return;
     const statusCode = error.statusCode || error.status || 500;
     return res.status(statusCode).json(buildOpenAIErrorPayload(error, statusCode));

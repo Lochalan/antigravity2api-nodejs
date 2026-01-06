@@ -91,7 +91,7 @@ router.get('/sd-models', async (req, res) => {
       }));
     res.json(imageModels);
   } catch (error) {
-    logger.error('获取SD模型列表失败:', error.message);
+    logger.error('Failed to get SD model list:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -152,7 +152,7 @@ router.post('/img2img', async (req, res) => {
       info: JSON.stringify({ prompt })
     });
   } catch (error) {
-    logger.error('SD图生图失败:', error.message);
+    logger.error('SD img2img failed:', error.message);
     res.status(500).json({ error: error.message });
   }
 });
@@ -183,7 +183,7 @@ router.post('/txt2img', async (req, res) => {
       info: JSON.stringify({ prompt, seed: seed || -1 })
     });
   } catch (error) {
-    logger.error('SD生图失败:', error.message);
+    logger.error('SD txt2img failed:', error.message);
     res.status(500).json({ error: error.message });
   }
 });

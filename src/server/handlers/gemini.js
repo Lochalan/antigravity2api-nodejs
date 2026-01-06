@@ -115,7 +115,7 @@ export const handleGeminiModelsList = async (req, res) => {
     const geminiModels = convertToGeminiModelList(openaiModels);
     res.json(geminiModels);
   } catch (error) {
-    logger.error('获取模型列表失败:', error.message);
+    logger.error('Failed to get model list:', error.message);
     res.status(500).json({ error: { code: 500, message: error.message, status: "INTERNAL" } });
   }
 };
@@ -149,7 +149,7 @@ export const handleGeminiModelDetail = async (req, res) => {
       res.status(404).json({ error: { code: 404, message: `Model ${modelId} not found`, status: "NOT_FOUND" } });
     }
   } catch (error) {
-    logger.error('获取模型详情失败:', error.message);
+    logger.error('Failed to get model details:', error.message);
     res.status(500).json({ error: { code: 500, message: error.message, status: "INTERNAL" } });
   }
 };
@@ -254,7 +254,7 @@ export const handleGeminiRequest = async (req, res, modelName, isStream) => {
           writeStreamData(res, buildGeminiErrorPayload(error, statusCode));
           endStream(res);
         }
-        logger.error('Gemini 流式请求失败:', error.message);
+        logger.error('Gemini streaming request failed:', error.message);
         return;
       }
     } else {
@@ -273,7 +273,7 @@ export const handleGeminiRequest = async (req, res, modelName, isStream) => {
       res.json(response);
     }
   } catch (error) {
-    logger.error('Gemini 请求失败:', error.message);
+    logger.error('Gemini request failed:', error.message);
     if (res.headersSent) return;
     const statusCode = error.statusCode || error.status || 500;
     res.status(statusCode).json(buildGeminiErrorPayload(error, statusCode));

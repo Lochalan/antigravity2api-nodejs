@@ -40,7 +40,7 @@ class QuotaManager {
         this.cache.set(key, value);
       });
     } catch (error) {
-      log.error('加载额度文件失败:', error.message);
+      log.error('Failed to load quota file:', error.message);
     }
   }
 
@@ -56,7 +56,7 @@ class QuotaManager {
       };
       fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2), 'utf8');
     } catch (error) {
-      log.error('保存额度文件失败:', error.message);
+      log.error('Failed to save quota file:', error.message);
     }
   }
 
@@ -92,7 +92,7 @@ class QuotaManager {
     });
     
     if (cleaned > 0) {
-      log.info(`清理了 ${cleaned} 个过期的额度记录`);
+      log.info(`Cleaned ${cleaned} expired quota records`);
       this.saveToFile();
     }
   }
@@ -120,7 +120,7 @@ class QuotaManager {
         const size = this.cache.size;
         if (size > 0) {
           this.cache.clear();
-          log.info(`紧急清理 ${size} 个额度缓存`);
+          log.info(`Emergency cleanup: ${size} quota cache entries`);
         }
       } else if (pressure === MemoryPressure.HIGH) {
         // 高压力时清理过期缓存

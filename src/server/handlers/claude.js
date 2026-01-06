@@ -348,7 +348,7 @@ export const handleClaudeRequest = async (req, res, isStream) => {
           res.write(createClaudeStreamEvent('error', buildClaudeErrorPayload(error, statusCode)));
           res.end();
         }
-        logger.error('Claude 流式请求失败:', error.message);
+        logger.error('Claude streaming request failed:', error.message);
         return;
       }
     } else {
@@ -377,7 +377,7 @@ export const handleClaudeRequest = async (req, res, isStream) => {
       res.json(response);
     }
   } catch (error) {
-    logger.error('Claude 请求失败:', error.message);
+    logger.error('Claude request failed:', error.message);
     if (res.headersSent) return;
     const statusCode = error.statusCode || error.status || 500;
     res.status(statusCode).json(buildClaudeErrorPayload(error, statusCode));
