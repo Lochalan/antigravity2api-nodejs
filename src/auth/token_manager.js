@@ -275,7 +275,7 @@ class TokenManager {
       const statusCode = error.response?.status;
       const rawBody = error.response?.data;
       const suffix = token.access_token ? token.access_token.slice(-8) : null;
-      const message = typeof rawBody === 'string' ? rawBody : (rawBody?.error?.message || error.message || '刷新 token 失败');
+      const message = typeof rawBody === 'string' ? rawBody : (rawBody?.error?.message || error.message || 'Token refresh failed');
       throw new TokenError(message, suffix, statusCode || 500);
     }
   }
@@ -569,7 +569,7 @@ class TokenManager {
       await this.store.writeAll(allTokens);
       
       await this.reload();
-      return { success: true, message: 'Token添加成功' };
+      return { success: true, message: 'Token added successfully' };
     } catch (error) {
       log.error('Failed to add token:', error.message);
       return { success: false, message: error.message };
@@ -582,14 +582,14 @@ class TokenManager {
       
       const index = allTokens.findIndex(t => t.refresh_token === refreshToken);
       if (index === -1) {
-        return { success: false, message: 'Token不存在' };
+        return { success: false, message: 'Token not found' };
       }
       
       allTokens[index] = { ...allTokens[index], ...updates };
       await this.store.writeAll(allTokens);
       
       await this.reload();
-      return { success: true, message: 'Token更新成功' };
+      return { success: true, message: 'Token updated successfully' };
     } catch (error) {
       log.error('Failed to update token:', error.message);
       return { success: false, message: error.message };
@@ -602,13 +602,13 @@ class TokenManager {
       
       const filteredTokens = allTokens.filter(t => t.refresh_token !== refreshToken);
       if (filteredTokens.length === allTokens.length) {
-        return { success: false, message: 'Token不存在' };
+        return { success: false, message: 'Token not found' };
       }
       
       await this.store.writeAll(filteredTokens);
       
       await this.reload();
-      return { success: true, message: 'Token删除成功' };
+      return { success: true, message: 'Token deleted successfully' };
     } catch (error) {
       log.error('Failed to delete token:', error.message);
       return { success: false, message: error.message };
