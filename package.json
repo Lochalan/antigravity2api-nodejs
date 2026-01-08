@@ -17,7 +17,8 @@
     "build:linux-arm64": "node scripts/build.js --target=linux-arm64",
     "build:macos": "node scripts/build.js --target=macos",
     "build:macos-arm64": "node scripts/build.js --target=macos-arm64",
-    "build:all": "node scripts/build.js --target=all"
+    "build:all": "node scripts/build.js --target=all",
+    "docker:build": "node scripts/build-docker.js"
   },
   "keywords": [
     "antigravity",

@@ -196,39 +196,49 @@ sudo systemctl start antigravity2api
 
 ### 使用 Docker Compose（推荐）
 
-1. **配置环境变量**
-
-创建 `.env` 文件：
+1. **一键构建**
 
 ```bash
-cp .env.example .env
+npm run docker:build
 ```
 
-编辑 `.env` 文件配置必要参数。
+该命令会自动：
+- 从 `.env.example` 创建 `.env`（如果不存在）
+- 从 `config.json.example` 创建 `config.json`（如果不存在）
+- 创建必要的目录（`data/`、`public/images/`）
+- 执行 `docker-compose build` 构建镜像
 
 2. **启动服务**
 
 ```bash
-docker-compose up -d
+docker compose up -d
 ```
 
 3. **查看日志**
 
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 4. **停止服务**
 
 ```bash
-docker-compose down
+docker compose down
 ```
 
-### 使用 Docker
+### 手动构建
 
-1. **构建镜像**
+如果需要手动构建，请先准备配置文件：
 
 ```bash
+# 复制配置文件
+cp .env.example .env
+cp config.json.example config.json
+
+# 创建必要目录
+mkdir -p data public/images
+
+# 构建镜像
 docker build -t antigravity2api .
 ```
 
@@ -529,6 +539,9 @@ npm run dev
 
 # 登录获取 Token
 npm run login
+
+# 构建 Docker 镜像
+npm run docker:build
 ```
 
 ## 项目结构
