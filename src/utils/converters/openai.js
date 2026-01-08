@@ -44,48 +44,30 @@ function extractImagesFromContent(content) {
   return result;
 }
 
-function handleAssistantMessage(message, antigravityMessages, enableThinking, actualModelName, sessionId, hasTools) {
+function handleAssistantMessage(message, antigravityMessages, enableThinking, actualModelName, sessionId) {
   const hasToolCalls = message.tool_calls && message.tool_calls.length > 0;
   const hasContent = message.content && message.content.trim() !== '';
-  const { reasoningSignature, reasoningContent, toolSignature, toolContent } = getSignatureContext(sessionId, actualModelName, hasTools);
+  const { reasoningSignature, toolSignature } = getSignatureContext(sessionId, actualModelName);
 
   const toolCalls = hasToolCalls
     ? message.tool_calls.map(toolCall => {
       const safeName = processToolName(toolCall.function.name, sessionId, actualModelName);
-      const signature = enableThinking
-        ? (toolCall.thoughtSignature || toolSignature || message.thoughtSignature || reasoningSignature)
-        : null;
+      const signature = enableThinking ? (toolCall.thoughtSignature || toolSignature) : null;
       return createFunctionCallPart(toolCall.id, safeName, toolCall.function.arguments, signature);
     })
     : [];
 
   const parts = [];
-  if (enableThinking) {
-    // 优先使用消息自带的思考内容，否则使用缓存的内容（与签名绑定）
-    let reasoningText = ' ';
-    let signature = null;
-    
-    if (typeof message.reasoning_content === 'string' && message.reasoning_content.length > 0) {
-      // 消息自带思考内容，使用消息自带的签名或缓存签名
-      reasoningText = message.reasoning_content;
-      signature = message.thoughtSignature || reasoningSignature || toolSignature;
-    } else {
-      // 没有思考内容，使用缓存的签名+内容（绑定关系）
-      signature = message.thoughtSignature || reasoningSignature || toolSignature;
-      if (signature === reasoningSignature) {
-        reasoningText = reasoningContent || ' ';
-      } else if (signature === toolSignature) {
-        reasoningText = toolContent || ' ';
-      }
-    }
-    
-    // 只有在有签名时才添加 thought part，避免 API 报错
-    if (signature) {
-      parts.push(createThoughtPart(reasoningText, signature));
-    }
+  // Only inject thinking block if the message actually has reasoning content
+  // Don't inject placeholder thinking for messages that never had reasoning
+  // (prevents repetitive thinking blocks in multi-turn conversations)
+  if (enableThinking && reasoningSignature && typeof message.reasoning_content === 'string' && message.reasoning_content.length > 0) {
+    parts.push(createThoughtPart(message.reasoning_content, reasoningSignature));
   }
   if (hasContent) {
     const part = { text: message.content.trimEnd() };
+    const sig = message.thoughtSignature || reasoningSignature;
+    if (sig) part.thoughtSignature = sig;
     parts.push(part);
   }
   if (!enableThinking && parts[0]) delete parts[0].thoughtSignature;
@@ -98,14 +80,14 @@ function handleToolCall(message, antigravityMessages) {
   pushFunctionResponse(message.tool_call_id, functionName, message.content, antigravityMessages);
 }
 
-function openaiMessageToAntigravity(openaiMessages, enableThinking, actualModelName, sessionId, hasTools) {
+function openaiMessageToAntigravity(openaiMessages, enableThinking, actualModelName, sessionId) {
   const antigravityMessages = [];
   for (const message of openaiMessages) {
     if (message.role === 'user' || message.role === 'system') {
       const extracted = extractImagesFromContent(message.content);
       pushUserMessage(extracted, antigravityMessages);
     } else if (message.role === 'assistant') {
-      handleAssistantMessage(message, antigravityMessages, enableThinking, actualModelName, sessionId, hasTools);
+      handleAssistantMessage(message, antigravityMessages, enableThinking, actualModelName, sessionId);
     } else if (message.role === 'tool') {
       handleToolCall(message, antigravityMessages);
     }
@@ -136,7 +118,7 @@ export function generateRequestBody(openaiMessages, modelName, parameters, opena
   const hasTools = tools && tools.length > 0;
 
   return buildRequestBody({
-    contents: openaiMessageToAntigravity(filteredMessages, enableThinking, actualModelName, token.sessionId, hasTools),
+    contents: openaiMessageToAntigravity(filteredMessages, enableThinking, actualModelName, token.sessionId),
     tools: tools,
     generationConfig: generateGenerationConfig(parameters, enableThinking, actualModelName),
     sessionId: token.sessionId,

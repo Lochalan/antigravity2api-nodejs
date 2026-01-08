@@ -87,12 +87,12 @@ async function dumpStreamResponse(dumpId, collector) {
   if (!isDebugDumpEnabled() || !collector) return;
   try {
     const header = `\n${'-'.repeat(80)}\n[${getTimestamp()}] RESPONSE ${dumpId} (STREAM)\n${'-'.repeat(80)}\n`;
-    
+
     // 解析 SSE 格式的流式响应，提取 JSON 数据
     const rawContent = collector.chunks.join('');
     const jsonObjects = [];
     const lines = rawContent.split('\n');
-    
+
     for (const line of lines) {
       const trimmed = line.trim();
       if (trimmed.startsWith('data:')) {
@@ -108,11 +108,11 @@ async function dumpStreamResponse(dumpId, collector) {
         }
       }
     }
-    
+
     // 以 JSON 数组格式写入
     const jsonOutput = JSON.stringify(jsonObjects, null, 2);
     const footer = `\n[${getTimestamp()}] END ${dumpId}\n`;
-    
+
     await appendDumpLog(header + jsonOutput + footer);
     logger.warn(`[DEBUG_DUMP ${dumpId}] 响应记录完成 (${jsonObjects.length} 条数据)`);
   } catch (e) {
@@ -235,7 +235,7 @@ function buildRequesterConfig(headers, body = null) {
 async function handleApiError(error, token, dumpId = null) {
   const status = error.response?.status || error.status || error.statusCode || 500;
   let errorBody = error.message;
-  
+
   if (error.response?.data?.readable) {
     const chunks = [];
     for await (const chunk of error.response.data) {
@@ -251,15 +251,15 @@ async function handleApiError(error, token, dumpId = null) {
   if (dumpId) {
     await dumpFinalRawResponse(dumpId, String(errorBody ?? ''), 'error.txt');
   }
-  
+
   if (status === 403) {
-    if (JSON.stringify(errorBody).includes("The caller does not")){
+    if (JSON.stringify(errorBody).includes("The caller does not")) {
       throw createApiError(`超出模型最大上下文。错误详情: ${errorBody}`, status, errorBody);
     }
     tokenManager.disableCurrentToken(token);
     throw createApiError(`该账号没有使用权限，已自动禁用。错误详情: ${errorBody}`, status, errorBody);
   }
-  
+
   throw createApiError(`API请求失败 (${status}): ${errorBody}`, status, errorBody);
 }
 
@@ -267,13 +267,15 @@ async function handleApiError(error, token, dumpId = null) {
 // ==================== 导出函数 ====================
 
 export async function generateAssistantResponse(requestBody, token, callback) {
-  
+
   const headers = buildHeaders(token);
   const dumpId = isDebugDumpEnabled() ? createDumpId('stream') : null;
   const streamCollector = dumpId ? createStreamCollector() : null;
   if (dumpId) {
     await dumpFinalRequest(dumpId, requestBody);
   }
+
+
 
   // 在 state 中临时缓存思维链签名，供流式多片段复用，并携带 session 与 model 信息以写入全局缓存
   const state = {
@@ -283,7 +285,7 @@ export async function generateAssistantResponse(requestBody, token, callback) {
     model: requestBody.model
   };
   const lineBuffer = getLineBuffer(); // 从对象池获取
-  
+
   const processChunk = (chunk) => {
     // 收集流式响应用于后续 JSON 格式化输出
     collectStreamChunk(streamCollector, chunk);
@@ -292,7 +294,7 @@ export async function generateAssistantResponse(requestBody, token, callback) {
       parseAndEmitStreamChunk(lines[i], state, callback);
     }
   };
-  
+
   try {
     if (useAxios) {
       const response = await httpStreamRequest({
@@ -301,12 +303,12 @@ export async function generateAssistantResponse(requestBody, token, callback) {
         headers,
         data: requestBody
       });
-      
+
       // 使用 Buffer 直接处理，避免 toString 的内存分配
       response.data.on('data', chunk => {
         processChunk(typeof chunk === 'string' ? chunk : chunk.toString('utf8'));
       });
-      
+
       await new Promise((resolve, reject) => {
         response.data.on('end', () => {
           releaseLineBuffer(lineBuffer); // 归还到对象池
@@ -383,14 +385,14 @@ export async function getAvailableModels() {
   if (modelListCache && (now - modelListCacheTime) < ttl) {
     return modelListCache;
   }
-  
+
   const token = await tokenManager.getToken();
   if (!token) {
     // 没有 token 时返回默认模型列表
     logger.warn('没有可用的 token，返回默认模型列表');
     return getDefaultModelList();
   }
-  
+
   const headers = buildHeaders(token);
   const data = await fetchRawModels(headers, token);
   if (!data) {
@@ -405,7 +407,7 @@ export async function getAvailableModels() {
     created,
     owned_by: 'google'
   }));
-  
+
   // 添加默认模型（如果 API 返回的列表中没有）
   const existingIds = new Set(modelList.map(m => m.id));
   for (const defaultModel of DEFAULT_MODELS) {
@@ -418,18 +420,18 @@ export async function getAvailableModels() {
       });
     }
   }
-  
+
   const result = {
     object: 'list',
     data: modelList
   };
-  
+
   // 更新缓存
   modelListCache = result;
   modelListCacheTime = now;
   const currentTTL = getModelCacheTTL();
   logger.info(`模型列表已缓存 (有效期: ${currentTTL / 1000}秒, 模型数量: ${modelList.length})`);
-  
+
   return result;
 }
 
@@ -454,17 +456,17 @@ export async function getModelsWithQuotas(token) {
       };
     }
   });
-  
+
   return quotas;
 }
 
 export async function generateAssistantResponseNoStream(requestBody, token) {
-  
+
   const headers = buildHeaders(token);
   const dumpId = isDebugDumpEnabled() ? createDumpId('no_stream') : null;
   if (dumpId) await dumpFinalRequest(dumpId, requestBody);
   let data;
-  
+
   try {
     if (useAxios) {
       if (dumpId) {
@@ -509,7 +511,7 @@ export async function generateAssistantResponseNoStream(requestBody, token) {
   let lastSeenSignature = null;
   const toolCalls = [];
   const imageUrls = [];
-  
+
   for (const part of parts) {
     if (part.thoughtSignature) {
       lastSeenSignature = part.thoughtSignature;
@@ -539,7 +541,7 @@ export async function generateAssistantResponseNoStream(requestBody, token) {
   if (!reasoningSignature && lastSeenSignature) {
     reasoningSignature = lastSeenSignature;
   }
-  
+
   // 提取 token 使用统计
   const usage = data.response?.usageMetadata;
   const usageData = usage ? {
@@ -547,18 +549,18 @@ export async function generateAssistantResponseNoStream(requestBody, token) {
     completion_tokens: usage.candidatesTokenCount || 0,
     total_tokens: usage.totalTokenCount || 0
   } : null;
-  
+
   // 将新的签名和思考内容写入全局缓存（按 model），供后续请求兜底使用
   const sessionId = requestBody.request?.sessionId;
   const model = requestBody.model;
   const hasTools = toolCalls.length > 0;
   const isImage = isImageModel(model);
-  
+
   // 判断是否应该缓存签名
   if (sessionId && model && shouldCacheSignature({ hasTools, isImageModel: isImage })) {
     // 获取最终使用的签名（优先使用工具签名，回退到思维签名）
     let finalSignature = reasoningSignature;
-    
+
     // 工具签名：取最后一个带 thoughtSignature 的工具作为缓存源（更接近"最新"）
     if (hasTools) {
       for (let i = toolCalls.length - 1; i >= 0; i--) {
@@ -569,7 +571,7 @@ export async function generateAssistantResponseNoStream(requestBody, token) {
         }
       }
     }
-    
+
     if (finalSignature) {
       const cachedContent = reasoningContent || ' ';
       setSignature(sessionId, model, finalSignature, cachedContent, { hasTools, isImageModel: isImage });
@@ -582,7 +584,7 @@ export async function generateAssistantResponseNoStream(requestBody, token) {
     markdown += imageUrls.map(url => `![image](${url})`).join('\n\n');
     return { content: markdown, reasoningContent: reasoningContent || null, reasoningSignature, toolCalls, usage: usageData };
   }
-  
+
   return { content, reasoningContent: reasoningContent || null, reasoningSignature, toolCalls, usage: usageData };
 }
 
@@ -590,7 +592,7 @@ export async function generateImageForSD(requestBody, token) {
   const headers = buildHeaders(token);
   let data;
   //console.log(JSON.stringify(requestBody,null,2));
-  
+
   try {
     if (useAxios) {
       data = (await httpRequest({
@@ -610,10 +612,10 @@ export async function generateImageForSD(requestBody, token) {
   } catch (error) {
     await handleApiError(error, token);
   }
-  
+
   const parts = data.response?.candidates?.[0]?.content?.parts || [];
   const images = parts.filter(p => p.inlineData).map(p => p.inlineData.data);
-  
+
   return images;
 }
 

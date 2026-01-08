@@ -128,46 +128,46 @@ app.get('/health', (req, res) => {
 
 // ==================== 服务器启动 ====================
 const server = app.listen(config.server.port, config.server.host, () => {
-  logger.info(`服务器已启动: ${config.server.host}:${config.server.port}`);
+  logger.info(`Server started: ${config.server.host}:${config.server.port}`);
 });
 
 server.on('error', (error) => {
   if (error.code === 'EADDRINUSE') {
-    logger.error(`端口 ${config.server.port} 已被占用`);
+    logger.error(`Port ${config.server.port} is already in use`);
     process.exit(1);
   } else if (error.code === 'EACCES') {
-    logger.error(`端口 ${config.server.port} 无权限访问`);
+    logger.error(`Port ${config.server.port} access denied`);
     process.exit(1);
   } else {
-    logger.error('服务器启动失败:', error.message);
+    logger.error('Server startup failed:', error.message);
     process.exit(1);
   }
 });
 
 // ==================== 优雅关闭 ====================
 const shutdown = () => {
-  logger.info('正在关闭服务器...');
-  
+  logger.info('Shutting down server...');
+
   // 停止内存管理器
   memoryManager.stop();
-  logger.info('已停止内存管理器');
-  
+  logger.info('Memory manager stopped');
+
   // 关闭子进程请求器
   closeRequester();
-  logger.info('已关闭子进程请求器');
-  
+  logger.info('Subprocess requester closed');
+
   // 清理对象池
   clearChunkPool();
-  logger.info('已清理对象池');
-  
+  logger.info('Object pools cleared');
+
   server.close(() => {
-    logger.info('服务器已关闭');
+    logger.info('Server closed');
     process.exit(0);
   });
-  
+
   // 5秒超时强制退出
   setTimeout(() => {
-    logger.warn('服务器关闭超时，强制退出');
+    logger.warn('Server shutdown timeout, forcing exit');
     process.exit(0);
   }, 5000);
 };

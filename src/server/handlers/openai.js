@@ -48,20 +48,36 @@ export const createStreamChunk = (id, created, model, delta, finish_reason = nul
  */
 export const handleOpenAIRequest = async (req, res) => {
   const { messages, model, stream = false, tools, ...params } = req.body;
-  
+
   try {
     if (!messages) {
       return res.status(400).json({ error: 'messages is required' });
     }
-    
+
     const token = await tokenManager.getToken();
     if (!token) {
-      throw new Error('没有可用的token，请运行 npm run login 获取token');
+      throw new Error('No available token, please run npm run login');
     }
-    
+
+    // Auto-generate session ID based on client type to isolate signature caches
+    // Factory and SillyTavern will have separate caches, preventing context bleeding
+    const userAgent = req.headers['user-agent'] || '';
+    const clientSessionId = req.headers['x-session-id'];
+
+    if (clientSessionId) {
+      // Explicit session ID takes priority
+      token.sessionId = clientSessionId;
+    } else if (userAgent.includes('factory')) {
+      // Factory CLI - use a static session ID so signatures persist across token rotations
+      token.sessionId = 'factory-client';
+    } else if (userAgent.includes('SillyTavern')) {
+      // SillyTavern - use static session ID so signatures persist across token rotations
+      token.sessionId = 'sillytavern-client';
+    }
+
     const isImageModel = model.includes('-image');
     const requestBody = generateRequestBody(messages, model, params, tools, token);
-    
+
     if (isImageModel) {
       prepareImageRequest(requestBody);
     }
@@ -69,10 +85,10 @@ export const handleOpenAIRequest = async (req, res) => {
     const { id, created } = createResponseMeta();
     const maxRetries = Number(config.retryTimes || 0);
     const safeRetries = maxRetries > 0 ? Math.floor(maxRetries) : 0;
-    
+
     if (stream) {
       setStreamHeaders(res);
-      
+
       // 启动心跳，防止 Cloudflare 超时断连
       const heartbeatTimer = createHeartbeat(res);
 
@@ -144,19 +160,19 @@ export const handleOpenAIRequest = async (req, res) => {
       // 非流式请求：设置较长超时，避免大模型响应超时
       req.setTimeout(0); // 禁用请求超时
       res.setTimeout(0); // 禁用响应超时
-      
+
       const { content, reasoningContent, reasoningSignature, toolCalls, usage } = await with429Retry(
         () => generateAssistantResponseNoStream(requestBody, token),
         safeRetries,
         'chat.no_stream '
       );
-      
+
       // DeepSeek 格式：reasoning_content 在 content 之前
       const message = { role: 'assistant' };
       if (reasoningContent) message.reasoning_content = reasoningContent;
       if (reasoningSignature && config.passSignatureToClient) message.thoughtSignature = reasoningSignature;
       message.content = content;
-      
+
       if (toolCalls.length > 0) {
         // 根据配置决定是否透传工具调用中的签名
         if (config.passSignatureToClient) {
@@ -165,7 +181,7 @@ export const handleOpenAIRequest = async (req, res) => {
           message.tool_calls = toolCalls.map(({ thoughtSignature, ...rest }) => rest);
         }
       }
-      
+
       // 使用预构建的响应对象，减少内存分配
       const response = {
         id,
@@ -179,7 +195,7 @@ export const handleOpenAIRequest = async (req, res) => {
         }],
         usage
       };
-      
+
       res.json(response);
     }
   } catch (error) {

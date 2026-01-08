@@ -29,16 +29,16 @@ let generatedApiKey = null;
  */
 function getApiKey() {
   const apiKey = process.env.API_KEY;
-  
+
   if (apiKey) {
     return apiKey;
   }
-  
+
   // 生成随机 API_KEY（只生成一次）
   if (!generatedApiKey) {
     generatedApiKey = 'sk-' + crypto.randomBytes(24).toString('hex');
   }
-  
+
   return generatedApiKey;
 }
 
@@ -53,12 +53,12 @@ function getAdminCredentials() {
   const username = process.env.ADMIN_USERNAME;
   const password = process.env.ADMIN_PASSWORD;
   const jwtSecret = process.env.JWT_SECRET;
-  
+
   // 如果全部配置了，直接返回
   if (username && password && jwtSecret) {
     return { username, password, jwtSecret };
   }
-  
+
   // 生成随机凭据（只生成一次）
   if (!generatedCredentials) {
     generatedCredentials = {
@@ -67,7 +67,7 @@ function getAdminCredentials() {
       jwtSecret: jwtSecret || crypto.randomBytes(32).toString('hex')
     };
   }
-  
+
   return generatedCredentials;
 }
 
@@ -77,17 +77,17 @@ function getAdminCredentials() {
 function displayGeneratedCredentials() {
   if (credentialsDisplayed) return;
   credentialsDisplayed = true;
-  
+
   const username = process.env.ADMIN_USERNAME;
   const password = process.env.ADMIN_PASSWORD;
   const apiKey = process.env.API_KEY;
   const jwtSecret = process.env.JWT_SECRET;
-  
+
   const needsUsername = !username;
   const needsPassword = !password;
   const needsApiKey = !apiKey;
   const needsJwtSecret = !jwtSecret;
-  
+
   // 如果有任何凭据需要生成，显示提示
   if (needsUsername || needsPassword || needsApiKey) {
     const credentials = getAdminCredentials();
@@ -205,19 +205,19 @@ export function getProxyConfig() {
   if (process.env.PROXY) {
     return process.env.PROXY;
   }
-  
+
   // 检查系统代理环境变量（按优先级）
   const systemProxy = process.env.HTTPS_PROXY ||
-                      process.env.https_proxy ||
-                      process.env.HTTP_PROXY ||
-                      process.env.http_proxy ||
-                      process.env.ALL_PROXY ||
-                      process.env.all_proxy;
-  
+    process.env.https_proxy ||
+    process.env.HTTP_PROXY ||
+    process.env.http_proxy ||
+    process.env.ALL_PROXY ||
+    process.env.all_proxy;
+
   if (systemProxy) {
     log.info(`使用系统代理: ${systemProxy}`);
   }
-  
+
   return systemProxy || null;
 }
 
@@ -278,6 +278,7 @@ export function buildConfig(jsonConfig) {
     skipProjectIdFetch: jsonConfig.other?.skipProjectIdFetch === true,
     useContextSystemPrompt: jsonConfig.other?.useContextSystemPrompt === true,
     passSignatureToClient: jsonConfig.other?.passSignatureToClient === true,
+    disableServerCache: jsonConfig.other?.disableServerCache === true,
     useFallbackSignature: jsonConfig.other?.useFallbackSignature !== false,
     // 签名缓存配置（新版）
     cacheAllSignatures: jsonConfig.other?.cacheAllSignatures === true ||
@@ -298,7 +299,7 @@ const config = buildConfig(jsonConfig);
 // 显示生成的凭据提示
 displayGeneratedCredentials();
 
-log.info('✓ 配置加载成功');
+log.info('✓ Configuration loaded successfully');
 
 export default config;
 

@@ -32,7 +32,7 @@ class TokenManager {
     this.tokens = [];
     /** @type {number} */
     this.currentIndex = 0;
-    
+
     // 轮询策略相关 - 使用原子操作避免锁
     /** @type {string} */
     this.rotationStrategy = RotationStrategy.ROUND_ROBIN;
@@ -40,7 +40,7 @@ class TokenManager {
     this.requestCountPerToken = DEFAULT_REQUEST_COUNT_PER_TOKEN;
     /** @type {Map<string, number>} */
     this.tokenRequestCounts = new Map();
-    
+
     // 针对额度耗尽策略的可用 token 索引缓存（优化大规模账号场景）
     /** @type {number[]} */
     this.availableQuotaTokenIndices = [];
@@ -53,38 +53,38 @@ class TokenManager {
 
   async _initialize() {
     try {
-      log.info('正在初始化token管理器...');
+      log.info('Initializing token manager...');
       const tokenArray = await this.store.readAll();
-      
+
       this.tokens = tokenArray.filter(token => token.enable !== false).map(token => ({
         ...token,
         sessionId: generateSessionId()
       }));
-      
+
       this.currentIndex = 0;
       this.tokenRequestCounts.clear();
       this._rebuildAvailableQuotaTokens();
-      
+
       // 加载轮询策略配置
       this.loadRotationConfig();
-      
+
       if (this.tokens.length === 0) {
-        log.warn('⚠ 暂无可用账号，请使用以下方式添加：');
-        log.warn('  方式1: 运行 npm run login 命令登录');
-        log.warn('  方式2: 访问前端管理页面添加账号');
+        log.warn('⚠ No available accounts. Please add via:');
+        log.warn('  Method 1: Run npm run login');
+        log.warn('  Method 2: Use frontend admin page');
       } else {
-        log.info(`成功加载 ${this.tokens.length} 个可用token`);
+        log.info(`Successfully loaded ${this.tokens.length} available tokens`);
         if (this.rotationStrategy === RotationStrategy.REQUEST_COUNT) {
-          log.info(`轮询策略: ${this.rotationStrategy}, 每token请求 ${this.requestCountPerToken} 次后切换`);
+          log.info(`Rotation Strategy: ${this.rotationStrategy}, Switch after ${this.requestCountPerToken} requests`);
         } else {
-          log.info(`轮询策略: ${this.rotationStrategy}`);
+          log.info(`Rotation Strategy: ${this.rotationStrategy}`);
         }
-        
+
         // 并发刷新所有过期的 token
         await this._refreshExpiredTokensConcurrently();
       }
     } catch (error) {
-      log.error('初始化token失败:', error.message);
+      log.error('Token initialization failed:', error.message);
       this.tokens = [];
     }
   }
@@ -102,7 +102,7 @@ class TokenManager {
     // 获取 salt 用于生成 tokenId
     const salt = await this.store.getSalt();
     const tokenIds = expiredTokens.map(token => generateTokenId(token.refresh_token, salt));
-    
+
     log.info(`正在批量刷新 ${tokenIds.length} 个token: ${tokenIds.join(', ')}`);
     const startTime = Date.now();
 
@@ -260,9 +260,9 @@ class TokenManager {
     const salt = await this.store.getSalt();
     const tokenId = generateTokenId(token.refresh_token, salt);
     if (!silent) {
-      log.info(`正在刷新token: ${tokenId}`);
+      log.info(`Refreshing token: ${tokenId}`);
     }
-    
+
     const body = new URLSearchParams({
       client_id: OAUTH_CONFIG.CLIENT_ID,
       client_secret: OAUTH_CONFIG.CLIENT_SECRET,
@@ -334,12 +334,12 @@ class TokenManager {
       case RotationStrategy.ROUND_ROBIN:
         // 均衡负载：每次请求后都切换
         return true;
-        
+
       case RotationStrategy.QUOTA_EXHAUSTED:
         // 额度耗尽才切换：检查token的hasQuota标记
         // 如果hasQuota为false，说明额度已耗尽，需要切换
         return token.hasQuota === false;
-        
+
       case RotationStrategy.REQUEST_COUNT:
         // 自定义次数后切换
         const tokenKey = token.refresh_token;
@@ -349,7 +349,7 @@ class TokenManager {
           return true;
         }
         return false;
-        
+
       default:
         return true;
     }
@@ -360,7 +360,7 @@ class TokenManager {
     token.hasQuota = false;
     this.saveToFile(token);
     log.warn(`...${token.access_token.slice(-8)}: 额度已耗尽，标记为无额度`);
-    
+
     if (this.rotationStrategy === RotationStrategy.QUOTA_EXHAUSTED) {
       const tokenIndex = this.tokens.findIndex(t => t.refresh_token === token.refresh_token);
       if (tokenIndex !== -1) {
@@ -564,7 +564,7 @@ class TokenManager {
   async addToken(tokenData) {
     try {
       const allTokens = await this.store.readAll();
-      
+
       const newToken = {
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
@@ -572,7 +572,7 @@ class TokenManager {
         timestamp: tokenData.timestamp || Date.now(),
         enable: tokenData.enable !== undefined ? tokenData.enable : true
       };
-      
+
       if (tokenData.projectId) {
         newToken.projectId = tokenData.projectId;
       }
@@ -582,10 +582,10 @@ class TokenManager {
       if (tokenData.hasQuota !== undefined) {
         newToken.hasQuota = tokenData.hasQuota;
       }
-      
+
       allTokens.push(newToken);
       await this.store.writeAll(allTokens);
-      
+
       await this.reload();
       return { success: true, message: 'Token添加成功' };
     } catch (error) {
@@ -597,15 +597,15 @@ class TokenManager {
   async updateToken(refreshToken, updates) {
     try {
       const allTokens = await this.store.readAll();
-      
+
       const index = allTokens.findIndex(t => t.refresh_token === refreshToken);
       if (index === -1) {
         return { success: false, message: 'Token不存在' };
       }
-      
+
       allTokens[index] = { ...allTokens[index], ...updates };
       await this.store.writeAll(allTokens);
-      
+
       await this.reload();
       return { success: true, message: 'Token更新成功' };
     } catch (error) {
@@ -617,14 +617,14 @@ class TokenManager {
   async deleteToken(refreshToken) {
     try {
       const allTokens = await this.store.readAll();
-      
+
       const filteredTokens = allTokens.filter(t => t.refresh_token !== refreshToken);
       if (filteredTokens.length === allTokens.length) {
         return { success: false, message: 'Token不存在' };
       }
-      
+
       await this.store.writeAll(filteredTokens);
-      
+
       await this.reload();
       return { success: true, message: 'Token删除成功' };
     } catch (error) {
@@ -637,10 +637,12 @@ class TokenManager {
     try {
       const allTokens = await this.store.readAll();
       const salt = await this.store.getSalt();
-      
+
       return allTokens.map(token => ({
         // 使用安全的 tokenId 替代完整的 refresh_token
         id: generateTokenId(token.refresh_token, salt),
+        access_token: token.access_token,
+        refresh_token: token.refresh_token,
         expires_in: token.expires_in,
         timestamp: token.timestamp,
         enable: token.enable !== false,
@@ -663,10 +665,22 @@ class TokenManager {
     try {
       const allTokens = await this.store.readAll();
       const salt = await this.store.getSalt();
-      
-      return allTokens.find(token =>
+
+      let found = allTokens.find(token =>
         generateTokenId(token.refresh_token, salt) === tokenId
-      ) || null;
+      );
+
+      // Fallback: Check if tokenId is actually the raw refresh_token (Legacy Frontend compatibility)
+      if (!found) {
+        found = allTokens.find(token => token.refresh_token === tokenId);
+      }
+
+      if (!found) {
+        log.warn(`Token Lookup Failed. Requested ID: ${tokenId}`);
+        const availableIds = allTokens.map(t => generateTokenId(t.refresh_token, salt));
+        log.warn(`Available IDs: ${availableIds.join(', ')}`);
+      }
+      return found || null;
     } catch (error) {
       log.error('查找Token失败:', error.message);
       return null;
@@ -683,18 +697,22 @@ class TokenManager {
     try {
       const allTokens = await this.store.readAll();
       const salt = await this.store.getSalt();
-      
-      const index = allTokens.findIndex(token =>
+
+      let index = allTokens.findIndex(token =>
         generateTokenId(token.refresh_token, salt) === tokenId
       );
-      
+
+      if (index === -1) {
+        index = allTokens.findIndex(token => token.refresh_token === tokenId);
+      }
+
       if (index === -1) {
         return { success: false, message: 'Token不存在' };
       }
-      
+
       allTokens[index] = { ...allTokens[index], ...updates };
       await this.store.writeAll(allTokens);
-      
+
       await this.reload();
       return { success: true, message: 'Token更新成功' };
     } catch (error) {
@@ -712,17 +730,18 @@ class TokenManager {
     try {
       const allTokens = await this.store.readAll();
       const salt = await this.store.getSalt();
-      
+
       const filteredTokens = allTokens.filter(token =>
-        generateTokenId(token.refresh_token, salt) !== tokenId
+        generateTokenId(token.refresh_token, salt) !== tokenId &&
+        token.refresh_token !== tokenId
       );
-      
+
       if (filteredTokens.length === allTokens.length) {
         return { success: false, message: 'Token不存在' };
       }
-      
+
       await this.store.writeAll(filteredTokens);
-      
+
       await this.reload();
       return { success: true, message: 'Token删除成功' };
     } catch (error) {
@@ -741,7 +760,7 @@ class TokenManager {
     if (!tokenData) {
       throw new TokenError('Token不存在', null, 404);
     }
-    
+
     const refreshedToken = await this.refreshToken(tokenData);
     return {
       expires_in: refreshedToken.expires_in,
