@@ -151,7 +151,10 @@ export function pushModelMessage({ parts, toolCalls, hasContent }, antigravityMe
   const hasToolCalls = toolCalls && toolCalls.length > 0;
 
   if (lastMessage?.role === 'model' && hasToolCalls && !hasContent) {
-    lastMessage.parts.push(...toolCalls);
+    // Merge into previous message (e.g. tool use following thinking)
+    // IMPORTANT: We must also include 'parts' because it might contain the injected placeholder thinking block!
+    const newParts = [...parts, ...toolCalls];
+    lastMessage.parts.push(...newParts);
   } else {
     const allParts = [...parts, ...(toolCalls || [])];
     antigravityMessages.push({ role: 'model', parts: allParts });

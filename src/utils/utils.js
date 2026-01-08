@@ -5,10 +5,10 @@ import { REASONING_EFFORT_MAP, DEFAULT_STOP_SEQUENCES } from '../constants/index
 import { toGenerationConfig } from './parameterNormalizer.js';
 
 // ==================== 签名常量 ====================
-const CLAUDE_THOUGHT_SIGNATURE = '';
-const GEMINI_THOUGHT_SIGNATURE = '';
-const CLAUDE_TOOL_SIGNATURE = '';
-const GEMINI_TOOL_SIGNATURE = '';
+const CLAUDE_THOUGHT_SIGNATURE = null;
+const GEMINI_THOUGHT_SIGNATURE = null;
+const CLAUDE_TOOL_SIGNATURE = null;
+const GEMINI_TOOL_SIGNATURE = null;
 
 export function getThoughtSignatureForModel(actualModelName) {
   if (!actualModelName) return CLAUDE_THOUGHT_SIGNATURE;

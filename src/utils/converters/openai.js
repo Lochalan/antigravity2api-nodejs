@@ -58,11 +58,10 @@ function handleAssistantMessage(message, antigravityMessages, enableThinking, ac
     : [];
 
   const parts = [];
-  // Only inject thinking block if the message actually has reasoning content
-  // Don't inject placeholder thinking for messages that never had reasoning
-  // (prevents repetitive thinking blocks in multi-turn conversations)
-  if (enableThinking && reasoningSignature && typeof message.reasoning_content === 'string' && message.reasoning_content.length > 0) {
-    parts.push(createThoughtPart(message.reasoning_content, reasoningSignature));
+  if (enableThinking && reasoningSignature) {
+    const reasoningText = (typeof message.reasoning_content === 'string' && message.reasoning_content.length > 0)
+      ? message.reasoning_content : ' ';
+    parts.push(createThoughtPart(reasoningText, reasoningSignature));
   }
   if (hasContent) {
     const part = { text: message.content.trimEnd() };

@@ -72,25 +72,13 @@ function handleClaudeAssistantMessage(message, antigravityMessages, enableThinki
 
   const hasContent = textContent && textContent.trim() !== '';
   const parts = [];
-  
-  if (enableThinking) {
-    const signature = messageSignature || reasoningSignature || toolSignature;
-    // 只有在有签名时才添加 thought part，避免 API 报错
-    if (signature) {
-      // 优先使用消息自带的思考内容，否则使用缓存的内容（与签名绑定）
-      let reasoningText = ' ';
-      if (thinkingContent.length > 0) {
-        reasoningText = thinkingContent;
-      } else if (signature === reasoningSignature) {
-        reasoningText = reasoningContent || ' ';
-      } else if (signature === toolSignature) {
-        reasoningText = toolContent || ' ';
-      }
-      parts.push(createThoughtPart(reasoningText, signature));
-    }
+
+  if (enableThinking && reasoningSignature) {
+    parts.push(createThoughtPart(' ', reasoningSignature));
   }
   if (hasContent) {
     const part = { text: textContent.trimEnd() };
+    if (reasoningSignature) part.thoughtSignature = reasoningSignature;
     parts.push(part);
   }
   if (!enableThinking && parts[0]) delete parts[0].thoughtSignature;

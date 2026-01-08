@@ -93,7 +93,7 @@ export function setSignature(sessionId, model, signature) {
 }
 
 export function shouldCacheSignature() {
-  return false;
+  return true;
 }
 
 export function isImageModel(modelName) {
