@@ -49,10 +49,11 @@ function handleAssistantMessage(message, antigravityMessages, enableThinking, ac
   const hasContent = message.content && message.content.trim() !== '';
   const { reasoningSignature, toolSignature } = getSignatureContext(sessionId, actualModelName);
 
+
   const toolCalls = hasToolCalls
     ? message.tool_calls.map(toolCall => {
       const safeName = processToolName(toolCall.function.name, sessionId, actualModelName);
-      const signature = enableThinking ? (toolCall.thoughtSignature || toolSignature) : null;
+      const signature = enableThinking ? (toolCall.thoughtSignature || toolSignature || reasoningSignature) : null;
       return createFunctionCallPart(toolCall.id, safeName, toolCall.function.arguments, signature);
     })
     : [];
