@@ -614,12 +614,12 @@ router.get('/tokens/:tokenId/quotas', cookieAuthMiddleware, async (req, res) => 
       }
     }
 
-    // 转换时间为北京时间
-    const modelsWithBeijingTime = {};
+    // Convert times to local timezone
+    const modelsWithLocalTime = {};
     Object.entries(quotaData.models).forEach(([modelId, quota]) => {
-      modelsWithBeijingTime[modelId] = {
+      modelsWithLocalTime[modelId] = {
         remaining: quota.r,
-        resetTime: quotaManager.convertToBeijingTime(quota.t),
+        resetTime: quotaManager.convertToLocalTime(quota.t),
         resetTimeRaw: quota.t
       };
     });
@@ -628,7 +628,7 @@ router.get('/tokens/:tokenId/quotas', cookieAuthMiddleware, async (req, res) => 
       success: true,
       data: {
         lastUpdated: quotaData.lastUpdated,
-        models: modelsWithBeijingTime
+        models: modelsWithLocalTime
       }
     });
   } catch (error) {
