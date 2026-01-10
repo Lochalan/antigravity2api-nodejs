@@ -193,7 +193,8 @@ export const handleGeminiRequest = async (req, res, modelName, isStream) => {
           const { content, usage, reasoningSignature } = await with429Retry(
             () => generateAssistantResponseNoStream(requestBody, token),
             safeRetries,
-            'gemini.stream.image '
+            'gemini.stream.image ',
+            { token, tokenManager }
           );
           const chunk = createGeminiResponse(content, null, reasoningSignature, null, 'STOP', usage);
           writeStreamData(res, chunk);
@@ -225,7 +226,8 @@ export const handleGeminiRequest = async (req, res, modelName, isStream) => {
             }
           }),
           safeRetries,
-          'gemini.stream '
+          'gemini.stream ',
+          { token, tokenManager }
         );
 
         // 发送结束块和 usage
@@ -253,7 +255,8 @@ export const handleGeminiRequest = async (req, res, modelName, isStream) => {
       const { content, reasoningContent, reasoningSignature, toolCalls, usage } = await with429Retry(
         () => generateAssistantResponseNoStream(requestBody, token),
         safeRetries,
-        'gemini.no_stream '
+        'gemini.no_stream ',
+        { token, tokenManager }
       );
 
       const finishReason = toolCalls.length > 0 ? "STOP" : "STOP";

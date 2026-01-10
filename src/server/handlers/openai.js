@@ -97,7 +97,8 @@ export const handleOpenAIRequest = async (req, res) => {
           const { content, usage, reasoningSignature } = await with429Retry(
             () => generateAssistantResponseNoStream(requestBody, token),
             safeRetries,
-            'chat.stream.image '
+            'chat.stream.image ',
+            { token, tokenManager }
           );
           const delta = { content };
           if (reasoningSignature && config.passSignatureToClient) {
@@ -138,7 +139,8 @@ export const handleOpenAIRequest = async (req, res) => {
               }
             }),
             safeRetries,
-            'chat.stream '
+            'chat.stream ',
+            { token, tokenManager }
           );
 
           writeStreamData(res, { ...createStreamChunk(id, created, model, {}, hasToolCall ? 'tool_calls' : 'stop'), usage: usageData });
@@ -164,7 +166,8 @@ export const handleOpenAIRequest = async (req, res) => {
       const { content, reasoningContent, reasoningSignature, toolCalls, usage } = await with429Retry(
         () => generateAssistantResponseNoStream(requestBody, token),
         safeRetries,
-        'chat.no_stream '
+        'chat.no_stream ',
+        { token, tokenManager }
       );
 
       // DeepSeek 格式：reasoning_content 在 content 之前

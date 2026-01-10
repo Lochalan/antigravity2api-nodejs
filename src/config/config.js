@@ -240,7 +240,9 @@ export function buildConfig(jsonConfig) {
     },
     rotation: {
       strategy: jsonConfig.rotation?.strategy || 'round_robin',
-      requestCount: jsonConfig.rotation?.requestCount || 10
+      requestCount: jsonConfig.rotation?.requestCount || 10,
+      requestCountMin: jsonConfig.rotation?.requestCountMin || null,
+      requestCountMax: jsonConfig.rotation?.requestCountMax || null
     },
     imageBaseUrl: process.env.IMAGE_BASE_URL || null,
     maxImages: jsonConfig.other?.maxImages || DEFAULT_MAX_IMAGES,

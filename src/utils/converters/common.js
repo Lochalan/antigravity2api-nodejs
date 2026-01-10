@@ -174,6 +174,42 @@ export function pushModelMessage({ parts, toolCalls, hasContent }, antigravityMe
   //console.log(JSON.stringify(antigravityMessages,null,2));
 }
 
+// Model-specific context limits (chars) - Claude models have smaller limits on Antigravity
+const MODEL_CONTEXT_LIMITS = {
+  'claude-opus': 400000,    // ~100k tokens
+  'claude-sonnet': 400000,  // ~100k tokens
+  'gemini': 1500000         // ~375k tokens (more generous)
+};
+
+/**
+ * Get context limit for model
+ */
+function getModelContextLimit(modelName) {
+  if (modelName?.includes('claude-opus')) return MODEL_CONTEXT_LIMITS['claude-opus'];
+  if (modelName?.includes('claude-sonnet')) return MODEL_CONTEXT_LIMITS['claude-sonnet'];
+  return MODEL_CONTEXT_LIMITS['gemini'];
+}
+
+/**
+ * Estimate content size in characters
+ */
+function estimateContentSize(contents) {
+  let size = 0;
+  for (const msg of contents) {
+    if (msg.parts) {
+      for (const part of msg.parts) {
+        if (part.text) size += part.text.length;
+        if (part.inlineData?.data) size += part.inlineData.data.length;
+        if (part.functionResponse?.response?.output) {
+          const output = part.functionResponse.response.output;
+          size += typeof output === 'string' ? output.length : JSON.stringify(output).length;
+        }
+      }
+    }
+  }
+  return size;
+}
+
 /**
  * 构建基础请求体
  * @param {Object} options - 选项
@@ -188,6 +224,16 @@ export function pushModelMessage({ parts, toolCalls, hasContent }, antigravityMe
  */
 export function buildRequestBody({ contents, tools, generationConfig, sessionId, systemInstruction }, token, actualModelName) {
   const hasTools = tools && tools.length > 0;
+
+  // Check content size against model-specific limit
+  const contentSize = estimateContentSize(contents);
+  const contextLimit = getModelContextLimit(actualModelName);
+  
+  if (contentSize > contextLimit) {
+    const sizeMB = (contentSize / 1000000).toFixed(2);
+    const limitMB = (contextLimit / 1000000).toFixed(2);
+    throw new Error(`Prompt too long for ${actualModelName} (${sizeMB}MB > ${limitMB}MB limit). Try using a Gemini model for longer contexts, or start a new conversation.`);
+  }
 
   const requestBody = {
     project: token.projectId,

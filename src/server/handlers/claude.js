@@ -111,6 +111,11 @@ export const createClaudeResponse = (id, model, content, reasoning, reasoningSig
 export const handleClaudeRequest = async (req, res, isStream) => {
   const { messages, model, system, tools, ...rawParams } = req.body;
 
+  // Debug: log if thinking is requested
+  if (rawParams.thinking) {
+    logger.info(`Claude request with thinking: ${JSON.stringify(rawParams.thinking)}`);
+  }
+
   try {
     if (!messages) {
       return res.status(400).json(buildClaudeErrorPayload({ message: 'messages is required' }, 400));
@@ -166,7 +171,8 @@ export const handleClaudeRequest = async (req, res, isStream) => {
           const { content, usage } = await with429Retry(
             () => generateAssistantResponseNoStream(requestBody, token),
             safeRetries,
-            'claude.stream.image '
+            'claude.stream.image ',
+            { token, tokenManager }
           );
           
           // 发送文本块
@@ -200,9 +206,37 @@ export const handleClaudeRequest = async (req, res, isStream) => {
           return;
         }
         
+        let textChunkCount = 0;
+        let reasoningChunkCount = 0;
+        
         await with429Retry(
           () => generateAssistantResponse(requestBody, token, (data) => {
+            if (data.type === 'text') {
+              textChunkCount++;
+            } else if (data.type === 'reasoning') {
+              reasoningChunkCount++;
+            } else {
+              // Log aggregated counts when switching to different type
+              if (reasoningChunkCount > 0) {
+                logger.info(`Claude stream: ${reasoningChunkCount} reasoning chunks`);
+                reasoningChunkCount = 0;
+              }
+              if (textChunkCount > 0) {
+                logger.info(`Claude stream: ${textChunkCount} text chunks`);
+                textChunkCount = 0;
+              }
+              logger.info(`Claude stream: ${data.type}`);
+            }
             if (data.type === 'usage') {
+              // Log final counts before usage
+              if (reasoningChunkCount > 0) {
+                logger.info(`Claude stream: ${reasoningChunkCount} reasoning chunks`);
+                reasoningChunkCount = 0;
+              }
+              if (textChunkCount > 0) {
+                logger.info(`Claude stream: ${textChunkCount} text chunks`);
+                textChunkCount = 0;
+              }
               usageData = data.usage;
             } else if (data.type === 'reasoning') {
               // 思维链内容 - 使用 thinking 类型
@@ -298,7 +332,8 @@ export const handleClaudeRequest = async (req, res, isStream) => {
             }
           }),
           safeRetries,
-          'claude.stream '
+          'claude.stream ',
+          { token, tokenManager }
         );
         
         // 结束最后一个内容块
@@ -342,7 +377,8 @@ export const handleClaudeRequest = async (req, res, isStream) => {
       const { content, reasoningContent, reasoningSignature, toolCalls, usage } = await with429Retry(
         () => generateAssistantResponseNoStream(requestBody, token),
         safeRetries,
-        'claude.no_stream '
+        'claude.no_stream ',
+        { token, tokenManager }
       );
       
       const stopReason = toolCalls.length > 0 ? 'tool_use' : 'end_turn';

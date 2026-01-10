@@ -38,8 +38,14 @@ class TokenManager {
     this.rotationStrategy = RotationStrategy.ROUND_ROBIN;
     /** @type {number} */
     this.requestCountPerToken = DEFAULT_REQUEST_COUNT_PER_TOKEN;
+    /** @type {number|null} */
+    this.requestCountMin = null;
+    /** @type {number|null} */
+    this.requestCountMax = null;
     /** @type {Map<string, number>} */
     this.tokenRequestCounts = new Map();
+    /** @type {Map<string, number>} */
+    this.tokenRotationThresholds = new Map();
 
     // 针对额度耗尽策略的可用 token 索引缓存（优化大规模账号场景）
     /** @type {number[]} */
@@ -58,12 +64,18 @@ class TokenManager {
 
       this.tokens = tokenArray.filter(token => token.enable !== false).map(token => ({
         ...token,
-        sessionId: generateSessionId()
+        sessionId: generateSessionId(),
+        hasQuota: true  // Reset quota on startup - quotas typically reset daily
       }));
 
       this.currentIndex = 0;
       this.tokenRequestCounts.clear();
       this._rebuildAvailableQuotaTokens();
+
+      // Persist the quota reset to file so accounts.json stays clean
+      if (this.tokens.length > 0) {
+        this.saveToFile();
+      }
 
       // 加载轮询策略配置
       this.loadRotationConfig();
@@ -177,25 +189,67 @@ class TokenManager {
       const jsonConfig = getConfigJson();
       if (jsonConfig.rotation) {
         this.rotationStrategy = jsonConfig.rotation.strategy || RotationStrategy.ROUND_ROBIN;
-        this.requestCountPerToken = jsonConfig.rotation.requestCount || 10;
+        // Only use fixed requestCount if min/max range is not set
+        this.requestCountMin = jsonConfig.rotation.requestCountMin > 0 ? jsonConfig.rotation.requestCountMin : null;
+        this.requestCountMax = jsonConfig.rotation.requestCountMax > 0 ? jsonConfig.rotation.requestCountMax : null;
+        // If range is set, don't use fixed count; otherwise use fixed count or default
+        if (this.requestCountMin && this.requestCountMax) {
+          this.requestCountPerToken = null; // Will use random range instead
+        } else {
+          this.requestCountPerToken = jsonConfig.rotation.requestCount || DEFAULT_REQUEST_COUNT_PER_TOKEN;
+        }
       }
     } catch (error) {
       log.warn('加载轮询配置失败，使用默认值:', error.message);
     }
   }
 
+  // 获取当前token的轮换阈值（支持随机化）
+  _getRotationThreshold(tokenKey) {
+    // 如果已有阈值，直接返回
+    if (this.tokenRotationThresholds.has(tokenKey)) {
+      return this.tokenRotationThresholds.get(tokenKey);
+    }
+    // 生成新阈值
+    const threshold = this._generateRandomThreshold();
+    this.tokenRotationThresholds.set(tokenKey, threshold);
+    return threshold;
+  }
+
+  // 生成随机阈值
+  _generateRandomThreshold() {
+    if (this.requestCountMin !== null && this.requestCountMax !== null && 
+        this.requestCountMin > 0 && this.requestCountMax >= this.requestCountMin) {
+      const threshold = Math.floor(Math.random() * (this.requestCountMax - this.requestCountMin + 1)) + this.requestCountMin;
+      log.info(`New rotation threshold: ${threshold} (range ${this.requestCountMin}-${this.requestCountMax})`);
+      return threshold;
+    }
+    return this.requestCountPerToken || DEFAULT_REQUEST_COUNT_PER_TOKEN;
+  }
+
   // 更新轮询策略（热更新）
-  updateRotationConfig(strategy, requestCount) {
+  updateRotationConfig(strategy, requestCount, requestCountMin, requestCountMax) {
     if (strategy && Object.values(RotationStrategy).includes(strategy)) {
       this.rotationStrategy = strategy;
     }
     if (requestCount && requestCount > 0) {
       this.requestCountPerToken = requestCount;
     }
-    // 重置计数器
+    if (requestCountMin !== undefined) {
+      this.requestCountMin = requestCountMin > 0 ? requestCountMin : null;
+    }
+    if (requestCountMax !== undefined) {
+      this.requestCountMax = requestCountMax > 0 ? requestCountMax : null;
+    }
+    // 重置计数器和阈值
     this.tokenRequestCounts.clear();
+    this.tokenRotationThresholds.clear();
     if (this.rotationStrategy === RotationStrategy.REQUEST_COUNT) {
-      log.info(`轮询策略已更新: ${this.rotationStrategy}, 每token请求 ${this.requestCountPerToken} 次后切换`);
+      if (this.requestCountMin && this.requestCountMax) {
+        log.info(`轮询策略已更新: ${this.rotationStrategy}, 随机 ${this.requestCountMin}-${this.requestCountMax} 次后切换`);
+      } else {
+        log.info(`轮询策略已更新: ${this.rotationStrategy}, 每token请求 ${this.requestCountPerToken} 次后切换`);
+      }
     } else {
       log.info(`轮询策略已更新: ${this.rotationStrategy}`);
     }
@@ -307,8 +361,9 @@ class TokenManager {
     log.warn(`禁用token ...${token.access_token.slice(-8)}`)
     token.enable = false;
     this.saveToFile();
-    // 清理该 token 的请求计数（避免内存泄漏）
+    // 清理该 token 的请求计数和阈值（避免内存泄漏）
     this.tokenRequestCounts.delete(token.refresh_token);
+    this.tokenRotationThresholds.delete(token.refresh_token);
     this.tokens = this.tokens.filter(t => t.refresh_token !== token.refresh_token);
     this.currentIndex = this.currentIndex % Math.max(this.tokens.length, 1);
     // tokens 结构发生变化时，重建额度耗尽策略下的可用列表
@@ -341,11 +396,16 @@ class TokenManager {
         return token.hasQuota === false;
 
       case RotationStrategy.REQUEST_COUNT:
-        // 自定义次数后切换
+        // 自定义次数后切换（支持随机范围）
         const tokenKey = token.refresh_token;
         const count = this.incrementRequestCount(tokenKey);
-        if (count >= this.requestCountPerToken) {
+        const threshold = this._getRotationThreshold(tokenKey);
+        if (count >= threshold) {
           this.resetRequestCount(tokenKey);
+          // 生成新的随机阈值用于下次轮换
+          const newThreshold = this._generateRandomThreshold();
+          this.tokenRotationThresholds.set(tokenKey, newThreshold);
+          log.info(`Token rotated after ${count} requests, next threshold: ${newThreshold}`);
           return true;
         }
         return false;
@@ -357,9 +417,13 @@ class TokenManager {
 
   // 标记token额度耗尽
   markQuotaExhausted(token) {
+    // Skip if already marked
+    if (token.hasQuota === false) return;
+    
     token.hasQuota = false;
     this.saveToFile(token);
-    log.warn(`...${token.access_token.slice(-8)}: 额度已耗尽，标记为无额度`);
+    const identifier = token.email || `...${token.access_token.slice(-8)}`;
+    log.warn(`${identifier}: Quota exhausted, marked as no quota`);
 
     if (this.rotationStrategy === RotationStrategy.QUOTA_EXHAUSTED) {
       const tokenIndex = this.tokens.findIndex(t => t.refresh_token === token.refresh_token);
@@ -513,9 +577,21 @@ class TokenManager {
     const totalTokens = this.tokens.length;
     const startIndex = this.currentIndex;
 
+    // Check if all tokens have exhausted quota - if so, reset them all
+    const availableTokens = this.tokens.filter(t => t.hasQuota !== false);
+    if (availableTokens.length === 0 && this.tokens.length > 0) {
+      log.warn(`All ${this.tokens.length} tokens exhausted, resetting quotas...`);
+      this._resetAllQuotas();
+    }
+
     for (let i = 0; i < totalTokens; i++) {
       const index = (startIndex + i) % totalTokens;
       const token = this.tokens[index];
+
+      // Skip tokens with exhausted quota
+      if (token.hasQuota === false) {
+        continue;
+      }
 
       try {
         const result = await this._prepareToken(token);
@@ -781,8 +857,11 @@ class TokenManager {
     return {
       strategy: this.rotationStrategy,
       requestCount: this.requestCountPerToken,
+      requestCountMin: this.requestCountMin,
+      requestCountMax: this.requestCountMax,
       currentIndex: this.currentIndex,
-      tokenCounts: Object.fromEntries(this.tokenRequestCounts)
+      tokenCounts: Object.fromEntries(this.tokenRequestCounts),
+      tokenThresholds: Object.fromEntries(this.tokenRotationThresholds)
     };
   }
 }

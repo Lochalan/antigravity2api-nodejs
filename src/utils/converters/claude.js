@@ -126,8 +126,8 @@ function claudeMessageToAntigravity(claudeMessages, enableThinking, actualModelN
 }
 
 export function generateClaudeRequestBody(claudeMessages, modelName, parameters, claudeTools, systemPrompt, token) {
-  const enableThinking = isEnableThinking(modelName);
   const actualModelName = modelMapping(modelName);
+  const enableThinking = isEnableThinking(actualModelName);
   // 直接传递用户的系统提示词，让 buildSystemInstruction 处理所有合并逻辑
   // 包括反重力官方提示词、萌萌提示词和用户提示词的位置配置
 

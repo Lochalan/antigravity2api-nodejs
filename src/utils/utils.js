@@ -41,7 +41,9 @@ const EXCLUDED_KEYS = new Set([
   '$schema', 'additionalProperties', 'minLength', 'maxLength',
   'minItems', 'maxItems', 'uniqueItems', 'exclusiveMaximum',
   'exclusiveMinimum', 'const', 'anyOf', 'oneOf', 'allOf',
-  'any_of', 'one_of', 'all_of', 'multipleOf'
+  'any_of', 'one_of', 'all_of', 'multipleOf', 'propertyNames',
+  'patternProperties', 'unevaluatedProperties', 'dependentSchemas',
+  'if', 'then', 'else', 'not', 'contains', 'unevaluatedItems'
 ]);
 
 // 需要转换为大写的 type 值映射

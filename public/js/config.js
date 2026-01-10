@@ -20,8 +20,12 @@ function handleContextSystemChange() {
 function toggleRequestCountInput() {
     const strategy = document.getElementById('rotationStrategy').value;
     const requestCountGroup = document.getElementById('requestCountGroup');
+    const requestCountRangeGroup = document.getElementById('requestCountRangeGroup');
     if (requestCountGroup) {
         requestCountGroup.style.display = strategy === 'request_count' ? 'block' : 'none';
+    }
+    if (requestCountRangeGroup) {
+        requestCountRangeGroup.style.display = strategy === 'request_count' ? '' : 'none';
     }
 }
 
@@ -30,7 +34,7 @@ async function loadRotationStatus() {
         const response = await authFetch('/admin/rotation');
         const data = await response.json();
         if (data.success) {
-            const { strategy, requestCount, currentIndex } = data.data;
+            const { strategy, requestCount, requestCountMin, requestCountMax, currentIndex } = data.data;
             const strategyNames = {
                 'round_robin': '均衡负载',
                 'quota_exhausted': '额度耗尽切换',
@@ -40,7 +44,11 @@ async function loadRotationStatus() {
             if (statusEl) {
                 let statusText = `${strategyNames[strategy] || strategy}`;
                 if (strategy === 'request_count') {
-                    statusText += ` (每${requestCount}次)`;
+                    if (requestCountMin && requestCountMax) {
+                        statusText += ` (随机${requestCountMin}-${requestCountMax}次)`;
+                    } else {
+                        statusText += ` (每${requestCount}次)`;
+                    }
                 }
                 statusText += ` | 当前索引: ${currentIndex}`;
                 statusEl.textContent = statusText;
@@ -106,7 +114,13 @@ async function loadConfig() {
                     form.elements['ROTATION_STRATEGY'].value = json.rotation.strategy || 'round_robin';
                 }
                 if (form.elements['ROTATION_REQUEST_COUNT']) {
-                    form.elements['ROTATION_REQUEST_COUNT'].value = json.rotation.requestCount || 10;
+                    form.elements['ROTATION_REQUEST_COUNT'].value = json.rotation.requestCount || '';
+                }
+                if (form.elements['ROTATION_REQUEST_COUNT_MIN']) {
+                    form.elements['ROTATION_REQUEST_COUNT_MIN'].value = json.rotation.requestCountMin || '';
+                }
+                if (form.elements['ROTATION_REQUEST_COUNT_MAX']) {
+                    form.elements['ROTATION_REQUEST_COUNT_MAX'].value = json.rotation.requestCountMax || '';
                 }
                 toggleRequestCountInput();
             }
@@ -227,7 +241,9 @@ async function saveConfig(e) {
                 // 跳过，已在上面处理
             }
             else if (key === 'ROTATION_STRATEGY') jsonConfig.rotation.strategy = value || undefined;
-            else if (key === 'ROTATION_REQUEST_COUNT') jsonConfig.rotation.requestCount = parseInt(value) || undefined;
+            else if (key === 'ROTATION_REQUEST_COUNT') jsonConfig.rotation.requestCount = value ? parseInt(value) : null;
+            else if (key === 'ROTATION_REQUEST_COUNT_MIN') jsonConfig.rotation.requestCountMin = value ? parseInt(value) : null;
+            else if (key === 'ROTATION_REQUEST_COUNT_MAX') jsonConfig.rotation.requestCountMax = value ? parseInt(value) : null;
             else envConfig[key] = value;
         }
     });

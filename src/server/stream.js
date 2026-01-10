@@ -246,9 +246,10 @@ function computeBackoffMs(attempt, explicitDelayMs) {
  * @param {Function} fn - 要执行的异步函数，接收 attempt 参数
  * @param {number} maxRetries - 最大重试次数
  * @param {string} loggerPrefix - 日志前缀
+ * @param {Object} options - 可选配置 { token, tokenManager } 用于在429时标记token额度耗尽
  * @returns {Promise<any>}
  */
-export const with429Retry = async (fn, maxRetries, loggerPrefix = '') => {
+export const with429Retry = async (fn, maxRetries, loggerPrefix = '', options = {}) => {
   const retries = Number.isFinite(maxRetries) && maxRetries > 0 ? Math.floor(maxRetries) : 0;
   let attempt = 0;
   // 首次执行 + 最多 retries 次重试
@@ -259,12 +260,22 @@ export const with429Retry = async (fn, maxRetries, loggerPrefix = '') => {
       // 兼容多种错误格式：error.status, error.statusCode, error.response?.status
       const status = Number(error.status || error.statusCode || error.response?.status);
       if (status === 429 && attempt < retries) {
+        // Mark token quota exhausted if token info provided
+        if (options.token && options.tokenManager) {
+          // Skip further retries if token already marked exhausted
+          if (options.token.hasQuota === false) {
+            const identifier = options.token.email || `...${options.token.access_token?.slice(-8) || 'unknown'}`;
+            logger.warn(`${loggerPrefix}${identifier} has no quota, skipping retry`);
+            throw error;
+          }
+          options.tokenManager.markQuotaExhausted(options.token);
+        }
         const nextAttempt = attempt + 1;
         const explicitDelayMs = getUpstreamRetryDelayMs(error);
         const waitMs = computeBackoffMs(nextAttempt, explicitDelayMs);
         logger.warn(
-          `${loggerPrefix}收到 429，等待 ${waitMs}ms 后进行第 ${nextAttempt} 次重试（共 ${retries} 次）` +
-          (explicitDelayMs !== null ? `（上游提示≈${explicitDelayMs}ms）` : '')
+          `${loggerPrefix}Got 429, waiting ${waitMs}ms for retry ${nextAttempt}/${retries}` +
+          (explicitDelayMs !== null ? ` (upstream hint: ${explicitDelayMs}ms)` : '')
         );
         await sleep(waitMs);
         attempt = nextAttempt;

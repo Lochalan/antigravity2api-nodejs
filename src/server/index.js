@@ -69,6 +69,12 @@ app.use((req, res, next) => {
 // SD API 路由
 app.use('/sdapi/v1', sdRouter);
 
+// ==================== Claude Code telemetry stub ====================
+// Silence 404 errors from Claude Code event logging
+app.post('/api/event_logging/batch', (req, res) => {
+  res.status(200).json({ success: true });
+});
+
 // ==================== API Key 验证中间件 ====================
 app.use((req, res, next) => {
   if (req.path.startsWith('/v1/')) {

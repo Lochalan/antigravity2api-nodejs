@@ -476,7 +476,7 @@ router.get('/rotation', cookieAuthMiddleware, (req, res) => {
 // 更新轮询策略配置
 router.put('/rotation', cookieAuthMiddleware, (req, res) => {
   try {
-    const { strategy, requestCount } = req.body;
+    const { strategy, requestCount, requestCountMin, requestCountMax } = req.body;
 
     // 验证策略值
     const validStrategies = ['round_robin', 'quota_exhausted', 'request_count'];
@@ -488,19 +488,27 @@ router.put('/rotation', cookieAuthMiddleware, (req, res) => {
     }
 
     // 更新内存中的配置
-    tokenManager.updateRotationConfig(strategy, requestCount);
+    tokenManager.updateRotationConfig(strategy, requestCount, requestCountMin, requestCountMax);
 
     // 保存到config.json
     const currentConfig = getConfigJson();
     if (!currentConfig.rotation) currentConfig.rotation = {};
     if (strategy) currentConfig.rotation.strategy = strategy;
-    if (requestCount) currentConfig.rotation.requestCount = requestCount;
+    if (requestCount !== undefined) {
+      currentConfig.rotation.requestCount = (requestCount && requestCount > 0) ? requestCount : null;
+    }
+    if (requestCountMin !== undefined) {
+      currentConfig.rotation.requestCountMin = requestCountMin > 0 ? requestCountMin : null;
+    }
+    if (requestCountMax !== undefined) {
+      currentConfig.rotation.requestCountMax = requestCountMax > 0 ? requestCountMax : null;
+    }
     saveConfigJson(currentConfig);
 
     // 重载配置到内存
     reloadConfig();
 
-    logger.info(`轮询策略已更新: ${strategy || '未变'}, 请求次数: ${requestCount || '未变'}`);
+    logger.info(`轮询策略已更新: ${strategy || '未变'}, 请求次数: ${requestCount || '未变'}, 范围: ${requestCountMin || '-'}-${requestCountMax || '-'}`);
     res.json({ success: true, message: '轮询策略已更新', data: tokenManager.getRotationConfig() });
   } catch (error) {
     logger.error('更新轮询配置失败:', error.message);

@@ -407,8 +407,18 @@ html.tab-logs .tab[data-tab="logs"] {
                                         </select>
                                     </div>
                                     <div class="form-group compact" id="requestCountGroup">
-                                        <label>每Token请求次数 <span class="help-tip" data-tooltip="自定义次数模式下，每个Token处理多少次请求后切换">?</span></label>
+                                        <label>固定次数 <span class="help-tip" data-tooltip="自定义次数模式下，每个Token处理多少次请求后切换（留空启用随机范围）">?</span></label>
                                         <input type="number" name="ROTATION_REQUEST_COUNT" min="1" placeholder="10">
+                                    </div>
+                                </div>
+                                <div class="form-row-inline" id="requestCountRangeGroup">
+                                    <div class="form-group compact">
+                                        <label>随机范围(最小) <span class="help-tip" data-tooltip="随机切换次数的最小值，设置后将随机选择min-max之间的次数">?</span></label>
+                                        <input type="number" name="ROTATION_REQUEST_COUNT_MIN" min="1" placeholder="30">
+                                    </div>
+                                    <div class="form-group compact">
+                                        <label>随机范围(最大) <span class="help-tip" data-tooltip="随机切换次数的最大值">?</span></label>
+                                        <input type="number" name="ROTATION_REQUEST_COUNT_MAX" min="1" placeholder="70">
                                     </div>
                                 </div>
                                 <div class="rotation-status" id="rotationStatus">
