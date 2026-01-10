@@ -396,9 +396,12 @@ export const handleClaudeRequest = async (req, res, isStream) => {
       res.json(response);
     }
   } catch (error) {
-    logger.error('Claude 请求失败:', error.message);
-    if (res.headersSent) return;
     const statusCode = error.statusCode || error.status || 500;
+    // Only log non-429 errors in detail, 429s are already logged by retry logic
+    if (statusCode !== 429) {
+      logger.error('Claude 请求失败:', error.message);
+    }
+    if (res.headersSent) return;
     res.status(statusCode).json(buildClaudeErrorPayload(error, statusCode));
   }
 };

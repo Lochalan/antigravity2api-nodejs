@@ -242,6 +242,37 @@ function computeBackoffMs(attempt, explicitDelayMs) {
 }
 
 /**
+ * Check if 429 error is a true quota exhaustion vs temporary rate limit
+ * @param {Error} error - The error object
+ * @returns {boolean} true if quota is truly exhausted
+ */
+function isQuotaExhausted(error) {
+  try {
+    // Check error message for QUOTA_EXHAUSTED indicator
+    const message = error.message || '';
+    if (message.includes('QUOTA_EXHAUSTED') || message.includes('quotaResetDelay')) {
+      return true;
+    }
+    // Check error response body
+    const body = error.response?.data || error.body;
+    if (typeof body === 'string' && (body.includes('QUOTA_EXHAUSTED') || body.includes('quotaResetDelay'))) {
+      return true;
+    }
+    if (typeof body === 'object') {
+      const details = body?.error?.details || [];
+      for (const detail of details) {
+        if (detail.reason === 'QUOTA_EXHAUSTED' || detail.metadata?.quotaResetDelay) {
+          return true;
+        }
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return false;
+}
+
+/**
  * 带 429 重试的执行器
  * @param {Function} fn - 要执行的异步函数，接收 attempt 参数
  * @param {number} maxRetries - 最大重试次数
@@ -260,8 +291,10 @@ export const with429Retry = async (fn, maxRetries, loggerPrefix = '', options = 
       // 兼容多种错误格式：error.status, error.statusCode, error.response?.status
       const status = Number(error.status || error.statusCode || error.response?.status);
       if (status === 429 && attempt < retries) {
-        // Mark token quota exhausted if token info provided
-        if (options.token && options.tokenManager) {
+        // Only mark quota exhausted for TRUE quota exhaustion, not temporary rate limits
+        const quotaExhausted = isQuotaExhausted(error);
+        
+        if (options.token && options.tokenManager && quotaExhausted) {
           // Skip further retries if token already marked exhausted
           if (options.token.hasQuota === false) {
             const identifier = options.token.email || `...${options.token.access_token?.slice(-8) || 'unknown'}`;
@@ -270,13 +303,17 @@ export const with429Retry = async (fn, maxRetries, loggerPrefix = '', options = 
           }
           options.tokenManager.markQuotaExhausted(options.token);
         }
+        
         const nextAttempt = attempt + 1;
         const explicitDelayMs = getUpstreamRetryDelayMs(error);
         const waitMs = computeBackoffMs(nextAttempt, explicitDelayMs);
-        logger.warn(
-          `${loggerPrefix}Got 429, waiting ${waitMs}ms for retry ${nextAttempt}/${retries}` +
-          (explicitDelayMs !== null ? ` (upstream hint: ${explicitDelayMs}ms)` : '')
-        );
+        
+        if (quotaExhausted) {
+          logger.warn(`${loggerPrefix}Quota exhausted (429), waiting ${waitMs}ms for retry ${nextAttempt}/${retries}`);
+        } else {
+          logger.info(`${loggerPrefix}Rate limited (429), waiting ${waitMs}ms for retry ${nextAttempt}/${retries}`);
+        }
+        
         await sleep(waitMs);
         attempt = nextAttempt;
         continue;

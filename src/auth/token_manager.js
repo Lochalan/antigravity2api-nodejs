@@ -53,6 +53,10 @@ class TokenManager {
     /** @type {number} */
     this.currentQuotaIndex = 0;
 
+    // Cooldown tracking for quota resets
+    /** @type {number} */
+    this.lastQuotaResetTime = 0;
+
     /** @type {Promise<void>|null} */
     this._initPromise = null;
   }
